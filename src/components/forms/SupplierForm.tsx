@@ -71,7 +71,9 @@ export function SupplierForm({ supplier, onSubmit, isLoading, onCancel }: Suppli
 
   const handleSubmit = (data: SupplierFormData) => {
     onSubmit({
-      ...data,
+      supplier_code: data.supplier_code,
+      company_name: data.company_name,
+      is_active: data.is_active,
       contact_person: data.contact_person || null,
       address: data.address || null,
       city: data.city || null,
