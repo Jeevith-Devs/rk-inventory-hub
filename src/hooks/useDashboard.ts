@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface DashboardStats {
@@ -86,6 +86,27 @@ export const useCompanySettings = () => {
 
       if (error) throw error;
       return data;
+    },
+  });
+};
+
+export const useUpdateCompanySettings = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settings: any) => {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .update(settings)
+        .eq('id', settings.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings'] });
     },
   });
 };
