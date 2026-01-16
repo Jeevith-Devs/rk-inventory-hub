@@ -9,6 +9,12 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Suppliers from "@/pages/Suppliers";
+import Buyers from "@/pages/Buyers";
+import Products from "@/pages/Products";
+import Purchases from "@/pages/Purchases";
+import Sales from "@/pages/Sales";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,13 +70,12 @@ const App = () => (
               <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/suppliers" element={<Suppliers />} />
-                <Route path="/customers" element={<Dashboard />} />
-                <Route path="/products" element={<Dashboard />} />
-                <Route path="/purchases" element={<Dashboard />} />
-                <Route path="/sales" element={<Dashboard />} />
-                <Route path="/invoices" element={<Dashboard />} />
-                <Route path="/reports" element={<Dashboard />} />
-                <Route path="/settings" element={<Dashboard />} />
+                <Route path="/customers" element={<Buyers />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/purchases" element={<Purchases />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
