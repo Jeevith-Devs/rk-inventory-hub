@@ -4,8 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'admin' | 'staff';
 
+// Mock user object for local authentication
+interface MockUser extends Omit<User, 'id'> {
+  id: string;
+  email: string;
+  user_metadata: {
+    username: string;
+  };
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: (User | MockUser) | null;
   session: Session | null;
   userRole: UserRole | null;
   loading: boolean;
@@ -26,7 +35,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<(User | MockUser) | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +61,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Check for local authentication first
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    const username = localStorage.getItem('username');
+    const userEmail = localStorage.getItem('userEmail');
+
+    if (isAuthenticated === 'true' && username && userEmail) {
+      // Create a mock user object
+      const mockUser: MockUser = {
+        id: 'local-user-' + Date.now(),
+        email: userEmail,
+        user_metadata: {
+          username: username,
+        },
+      } as any;
+
+      setUser(mockUser);
+      setUserRole('admin'); // Local user is always admin
+      setLoading(false);
+      return;
+    }
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -116,6 +146,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    // Clear local authentication
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userEmail');
+    setUser(null);
+    setUserRole(null);
+    
     await supabase.auth.signOut();
   };
 

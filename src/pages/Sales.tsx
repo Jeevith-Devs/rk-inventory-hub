@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,19 +17,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSales } from '@/hooks/useSales';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useSales, useDeleteSale } from '@/hooks/useSales';
 import { useBuyers } from '@/hooks/useBuyers';
 import { SaleForm } from '@/components/forms/SaleForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye, FileText } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, FileText, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function Sales() {
   const { data: sales, isLoading } = useSales();
   const { data: buyers } = useBuyers();
+  const deleteSale = useDeleteSale();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingSale, setViewingSale] = useState<string | null>(null);
+  const [deletingSale, setDeletingSale] = useState<{ id: string; invoice_number: string } | null>(null);
 
   const filteredSales = sales?.filter((sale) =>
     sale.invoice_number.toLowerCase().includes(search.toLowerCase())
@@ -40,6 +54,14 @@ export default function Sales() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (deletingSale) {
+      deleteSale.mutate(deletingSale.id, {
+        onSuccess: () => setDeletingSale(null),
+      });
+    }
   };
 
   return (
@@ -116,8 +138,21 @@ export default function Sales() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => navigate(`/invoice/${sale.id}`)}
+                        title="Print Invoice"
+                      >
                         <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingSale({ id: sale.id, invoice_number: sale.invoice_number })}
+                        title="Delete Sale"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -147,6 +182,30 @@ export default function Sales() {
           {viewingSale && <SaleDetails saleId={viewingSale} />}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingSale} onOpenChange={() => setDeletingSale(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sale</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete invoice "{deletingSale?.invoice_number}"? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteSale.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteSale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }

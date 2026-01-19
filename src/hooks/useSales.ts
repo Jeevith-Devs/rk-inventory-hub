@@ -13,6 +13,8 @@ export interface Sale {
   dispatch_date: string | null;
   vehicle_no: string | null;
   lr_no: string | null;
+  purchase_order_no: string | null;
+  purchase_order_date: string | null;
   transport_mode: TransportMode | null;
   transport_charges: number | null;
   payment_mode: PaymentMode | null;
@@ -63,7 +65,7 @@ export const useSales = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sales')
-        .select('*, buyers(company_name)')
+        .select('*, buyers(company_name), sale_items(*, products(name, product_code))')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -129,6 +131,28 @@ export const useCreateSale = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Error creating sale', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteSale = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Delete sale items first
+      await supabase.from('sale_items').delete().eq('sale_id', id);
+      // Then delete the sale
+      const { error } = await supabase.from('sales').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Sale deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting sale', description: error.message, variant: 'destructive' });
     },
   });
 };

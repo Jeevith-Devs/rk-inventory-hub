@@ -45,6 +45,8 @@ const saleSchema = z.object({
   vehicle_no: z.string().optional(),
   lr_no: z.string().optional(),
   dispatch_date: z.string().optional(),
+  purchase_order_no: z.string().optional(),
+  purchase_order_date: z.string().optional(),
   transport_charges: z.number().min(0).default(0),
   notes: z.string().optional(),
 });
@@ -88,6 +90,8 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       vehicle_no: '',
       lr_no: '',
       dispatch_date: '',
+      purchase_order_no: '',
+      purchase_order_date: '',
       transport_charges: 0,
       notes: '',
     },
@@ -166,6 +170,8 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
           vehicle_no: data.vehicle_no || null,
           lr_no: data.lr_no || null,
           dispatch_date: data.dispatch_date || null,
+          purchase_order_no: data.purchase_order_no || null,
+          purchase_order_date: data.purchase_order_date || null,
           transport_charges: transportCharges,
           subtotal: totals.subtotal,
           discount_amount: totals.discount,
@@ -347,6 +353,34 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                     {...field}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Purchase Order Info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="purchase_order_no"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase Order No</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g., PO-001, 647/25-26" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="purchase_order_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Purchase Order Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
                 </FormControl>
               </FormItem>
             )}

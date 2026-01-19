@@ -1,3 +1,24 @@
+-- Drop existing types if they exist
+DROP TYPE IF EXISTS public.app_role CASCADE;
+DROP TYPE IF EXISTS public.product_status CASCADE;
+DROP TYPE IF EXISTS public.unit_type CASCADE;
+DROP TYPE IF EXISTS public.payment_mode CASCADE;
+DROP TYPE IF EXISTS public.transport_mode CASCADE;
+
+-- Drop existing tables if they exist
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
+DROP TABLE IF EXISTS public.sale_items CASCADE;
+DROP TABLE IF EXISTS public.sales CASCADE;
+DROP TABLE IF EXISTS public.purchase_items CASCADE;
+DROP TABLE IF EXISTS public.purchases CASCADE;
+DROP TABLE IF EXISTS public.products CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.buyers CASCADE;
+DROP TABLE IF EXISTS public.suppliers CASCADE;
+DROP TABLE IF EXISTS public.company_settings CASCADE;
+DROP TABLE IF EXISTS public.user_roles CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
 -- Create enum for user roles
 CREATE TYPE public.app_role AS ENUM ('admin', 'staff');
 
@@ -193,6 +214,8 @@ CREATE TABLE public.sales (
     dispatch_date DATE,
     vehicle_no TEXT,
     lr_no TEXT,
+    purchase_order_no TEXT,
+    purchase_order_date DATE,
     transport_mode transport_mode DEFAULT 'Road',
     transport_charges NUMERIC(12,2) DEFAULT 0,
     payment_mode payment_mode DEFAULT 'Credit',
@@ -361,10 +384,10 @@ ON public.suppliers FOR UPDATE
 TO authenticated
 USING (true);
 
-CREATE POLICY "Admins can delete suppliers"
+CREATE POLICY "Authenticated users can delete suppliers"
 ON public.suppliers FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Buyers policies
 CREATE POLICY "Authenticated users can view buyers"
@@ -382,10 +405,10 @@ ON public.buyers FOR UPDATE
 TO authenticated
 USING (true);
 
-CREATE POLICY "Admins can delete buyers"
+CREATE POLICY "Authenticated users can delete buyers"
 ON public.buyers FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Categories policies
 CREATE POLICY "Authenticated users can view categories"
@@ -398,10 +421,10 @@ ON public.categories FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
-CREATE POLICY "Admins can delete categories"
+CREATE POLICY "Authenticated users can delete categories"
 ON public.categories FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Products policies
 CREATE POLICY "Authenticated users can view products"
@@ -419,10 +442,10 @@ ON public.products FOR UPDATE
 TO authenticated
 USING (true);
 
-CREATE POLICY "Admins can delete products"
+CREATE POLICY "Authenticated users can delete products"
 ON public.products FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Purchases policies
 CREATE POLICY "Authenticated users can view purchases"
@@ -440,10 +463,10 @@ ON public.purchases FOR UPDATE
 TO authenticated
 USING (true);
 
-CREATE POLICY "Admins can delete purchases"
+CREATE POLICY "Authenticated users can delete purchases"
 ON public.purchases FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Purchase items policies
 CREATE POLICY "Authenticated users can view purchase items"
@@ -456,10 +479,15 @@ ON public.purchase_items FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
-CREATE POLICY "Admins can delete purchase items"
+CREATE POLICY "Authenticated users can update purchase items"
+ON public.purchase_items FOR UPDATE
+TO authenticated
+USING (true);
+
+CREATE POLICY "Authenticated users can delete purchase items"
 ON public.purchase_items FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Sales policies
 CREATE POLICY "Authenticated users can view sales"
@@ -477,10 +505,10 @@ ON public.sales FOR UPDATE
 TO authenticated
 USING (true);
 
-CREATE POLICY "Admins can delete sales"
+CREATE POLICY "Authenticated users can delete sales"
 ON public.sales FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Sale items policies
 CREATE POLICY "Authenticated users can view sale items"
@@ -493,10 +521,15 @@ ON public.sale_items FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
-CREATE POLICY "Admins can delete sale items"
+CREATE POLICY "Authenticated users can update sale items"
+ON public.sale_items FOR UPDATE
+TO authenticated
+USING (true);
+
+CREATE POLICY "Authenticated users can delete sale items"
 ON public.sale_items FOR DELETE
 TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+USING (true);
 
 -- Audit logs policies
 CREATE POLICY "Admins can view audit logs"
@@ -551,6 +584,8 @@ FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 -- ===============================
 -- TRIGGER FOR AUTO PROFILE CREATION
 -- ===============================
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql

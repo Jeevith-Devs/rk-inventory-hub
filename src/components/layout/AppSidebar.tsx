@@ -47,7 +47,6 @@ const transactionItems = [
 ];
 
 const reportItems = [
-  { title: 'Invoices', url: '/invoices', icon: FileText },
   { title: 'Reports', url: '/reports', icon: Box },
 ];
 

@@ -16,18 +16,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { usePurchases } from '@/hooks/usePurchases';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { usePurchases, useDeletePurchase } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { PurchaseForm } from '@/components/forms/PurchaseForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, Trash2 } from 'lucide-react';
 
 export default function Purchases() {
   const { data: purchases, isLoading } = usePurchases();
   const { data: suppliers } = useSuppliers();
+  const deletePurchase = useDeletePurchase();
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingPurchase, setViewingPurchase] = useState<string | null>(null);
+  const [deletingPurchase, setDeletingPurchase] = useState<{ id: string; purchase_number: string } | null>(null);
 
   const filteredPurchases = purchases?.filter(
     (purchase) =>
@@ -41,6 +53,14 @@ export default function Purchases() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (deletingPurchase) {
+      deletePurchase.mutate(deletingPurchase.id, {
+        onSuccess: () => setDeletingPurchase(null),
+      });
+    }
   };
 
   return (
@@ -105,13 +125,22 @@ export default function Purchases() {
                   <TableCell className="text-right">₹{purchase.tax_amount?.toLocaleString()}</TableCell>
                   <TableCell className="text-right font-medium">₹{purchase.total_amount?.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setViewingPurchase(purchase.id)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setViewingPurchase(purchase.id)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingPurchase({ id: purchase.id, purchase_number: purchase.purchase_number })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -139,6 +168,30 @@ export default function Purchases() {
           {viewingPurchase && <PurchaseDetails purchaseId={viewingPurchase} />}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingPurchase} onOpenChange={() => setDeletingPurchase(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Purchase</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete purchase "{deletingPurchase?.purchase_number}"? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deletePurchase.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletePurchase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageContainer>
   );
 }

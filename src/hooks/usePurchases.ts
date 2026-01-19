@@ -114,3 +114,25 @@ export const useCreatePurchase = () => {
     },
   });
 };
+
+export const useDeletePurchase = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Delete purchase items first
+      await supabase.from('purchase_items').delete().eq('purchase_id', id);
+      // Then delete the purchase
+      const { error } = await supabase.from('purchases').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchases'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Purchase deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting purchase', description: error.message, variant: 'destructive' });
+    },
+  });
+};

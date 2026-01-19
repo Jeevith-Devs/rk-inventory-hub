@@ -26,7 +26,8 @@ export function AppHeader({ title }: AppHeaderProps) {
         <Menu className="h-5 w-5" />
       </SidebarTrigger>
 
-      <div className="flex-1">
+      <div className="flex items-center gap-3 flex-1">
+        <img src="/rk-logo.svg" alt="RK Enterprises" style={{ height: '40px', objectFit: 'contain' }} />
         <h1 className="text-xl font-semibold text-foreground">{title}</h1>
       </div>
 

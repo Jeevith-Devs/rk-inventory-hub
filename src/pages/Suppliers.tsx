@@ -154,15 +154,13 @@ export default function Suppliers() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              {isAdmin && (
-                                <DropdownMenuItem 
-                                  onClick={() => setDeletingSupplier(supplier)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
+                            <DropdownMenuItem 
+                              onClick={() => setDeletingSupplier(supplier)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
