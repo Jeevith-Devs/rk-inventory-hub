@@ -13,9 +13,9 @@ export function Invoice() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 print:bg-white">
       {/* Non-printable Toolbar */}
-      <div className="no-print sticky top-0 z-50 bg-white dark:bg-gray-800 border-b p-3 sm:p-4 flex flex-wrap gap-2">
+      <div className="no-print sticky top-0 z-50 bg-white dark:bg-gray-800 print:bg-white print:text-black border-b p-3 sm:p-4 flex flex-wrap gap-2">
         <Button
           variant="outline"
           onClick={() => navigate('/sales')}
@@ -26,7 +26,10 @@ export function Invoice() {
           <span className="sm:hidden">Back</span>
         </Button>
         <Button
-          onClick={() => window.print()}
+          onClick={() => {
+            // Print with the invoice title already set by InvoiceTemplate
+            window.print();
+          }}
           className="flex items-center gap-2 text-sm sm:text-base"
         >
           <Printer size={16} />
