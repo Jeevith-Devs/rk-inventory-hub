@@ -28,18 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useCreatePurchase } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import { useProducts, useCreateProduct, type ProductInput, type UnitType } from '@/hooks/useProducts';
-import { Loader2, Plus, Trash2, PackagePlus } from 'lucide-react';
+import { useProducts } from '@/hooks/useProducts';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Constants } from '@/integrations/supabase/types';
 
 const purchaseSchema = z.object({
   supplier_id: z.string().min(1, 'Supplier is required'),
@@ -49,23 +42,7 @@ const purchaseSchema = z.object({
   notes: z.string().optional(),
 });
 
-const productSchema = z.object({
-  product_code: z.string().min(1, 'Product code is required'),
-  name: z.string().min(1, 'Product name is required'),
-  description: z.string().optional(),
-  unit: z.enum(['PCS', 'BOX', 'KG', 'MTR', 'LTR', 'SET', 'PAIR']).default('PCS'),
-  hsn_code: z.string().optional(),
-  purchase_price: z.number().min(0).default(0),
-  selling_price: z.number().min(0).default(0),
-  tax_percent: z.number().min(0).max(100).default(18),
-  discount_percent: z.number().min(0).max(100).default(0),
-  current_stock: z.number().min(0).default(0),
-  reorder_level: z.number().min(0).default(10),
-  status: z.enum(['active', 'inactive']).default('active'),
-});
-
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
-type ProductFormData = z.infer<typeof productSchema>;
 
 interface PurchaseItem {
   product_id: string;
@@ -88,12 +65,10 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
   const { data: suppliers } = useSuppliers();
   const { data: products } = useProducts();
   const createPurchase = useCreatePurchase();
-  const createProduct = useCreateProduct();
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [showNewProductDialog, setShowNewProductDialog] = useState(false);
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
@@ -263,45 +238,20 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
           <div className="flex gap-4 items-end">
             <div className="flex-1">
               <label className="text-sm font-medium">Product</label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Select value={selectedProduct} onValueChange={(value) => {
-                    if (value === '__new__') {
-                      setShowNewProductDialog(true);
-                    } else {
-                      setSelectedProduct(value);
-                    }
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__new__" className="bg-blue-50">
-                        <div className="flex items-center gap-2">
-                          <PackagePlus className="h-4 w-4" />
-                          Add New Product
-                        </div>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products
+                    ?.filter((p) => p.status === 'active')
+                    .map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} (₹{product.purchase_price})
                       </SelectItem>
-                      {products
-                        ?.filter((p) => p.status === 'active')
-                        .map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} (₹{product.purchase_price})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowNewProductDialog(true)}
-                  title="Add New Product"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-32">
               <label className="text-sm font-medium">Quantity</label>
@@ -408,336 +358,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
             Save Purchase
           </Button>
         </div>
-
-        {/* New Product Dialog */}
-        <NewProductDialog
-          open={showNewProductDialog}
-          onOpenChange={setShowNewProductDialog}
-          onProductCreated={(productId) => {
-            setSelectedProduct(productId);
-            setShowNewProductDialog(false);
-          }}
-          isLoading={createProduct.isPending}
-        />
       </form>
     </Form>
-  );
-}
-
-interface NewProductDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onProductCreated: (productId: string) => void;
-  isLoading: boolean;
-}
-
-function NewProductDialog({
-  open,
-  onOpenChange,
-  onProductCreated,
-  isLoading,
-}: NewProductDialogProps) {
-  const createProduct = useCreateProduct();
-  const productForm = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      product_code: `PRD-${Date.now().toString().slice(-6)}`,
-      name: '',
-      description: '',
-      unit: 'PCS',
-      hsn_code: '',
-      purchase_price: 0,
-      selling_price: 0,
-      tax_percent: 18,
-      discount_percent: 0,
-      current_stock: 0,
-      reorder_level: 10,
-      status: 'active',
-    },
-  });
-
-  const handleSubmit = (data: ProductFormData) => {
-    const productInput: ProductInput = {
-      product_code: data.product_code,
-      name: data.name,
-      description: data.description || null,
-      category_id: null,
-      unit: data.unit as UnitType,
-      hsn_code: data.hsn_code || null,
-      purchase_price: data.purchase_price,
-      selling_price: data.selling_price,
-      tax_percent: data.tax_percent,
-      discount_percent: data.discount_percent,
-      current_stock: data.current_stock,
-      reorder_level: data.reorder_level,
-      default_supplier_id: null,
-      status: data.status,
-    };
-
-    createProduct.mutate(productInput, {
-      onSuccess: (newProduct) => {
-        productForm.reset();
-        onProductCreated(newProduct.id);
-      },
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
-        </DialogHeader>
-
-        <Form {...productForm}>
-          <form onSubmit={productForm.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={productForm.control}
-                name="product_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Code *</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={productForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Name *</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={productForm.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={2} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Product Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={productForm.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Constants.public.Enums.unit.map((unit) => (
-                          <SelectItem key={unit} value={unit}>
-                            {unit}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={productForm.control}
-                name="hsn_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>HSN Code</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Pricing */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm">Pricing</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={productForm.control}
-                  name="purchase_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Purchase Price *</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="0.01"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={productForm.control}
-                  name="selling_price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Selling Price *</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="0.01"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={productForm.control}
-                  name="tax_percent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax % *</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="0.01"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={productForm.control}
-                  name="discount_percent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discount %</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          step="0.01"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Stock Info */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm">Stock Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={productForm.control}
-                  name="current_stock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Stock</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={productForm.control}
-                  name="reorder_level"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reorder Level</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <FormField
-              control={productForm.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  productForm.reset();
-                  onOpenChange(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Product & Select
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
   );
 }
