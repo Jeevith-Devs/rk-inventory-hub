@@ -41,36 +41,26 @@ function convertNumberToWords(num: number): string {
   }
 }
 
-export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
-  const { data: sales } = useSales();
-  const { data: buyers } = useBuyers();
-  const { data: products } = useProducts();
+interface InvoiceCopyProps {
+  saleId: string;
+  copyType: 'original' | 'duplicate' | 'triplicate' | 'quadruplicate';
+  sale: any;
+  buyer: any;
+  products: any;
+  basicAmount: number;
+  totalTax: number;
+}
 
-  const sale = sales?.find((s) => s.id === saleId);
-  const buyer = buyers?.find((b) => b.id === sale?.buyer_id);
-
-  useEffect(() => {
-    window.print();
-  }, []);
-
-  useEffect(() => {
-    if (sale && buyer) {
-      const invoiceTitle = `${sale.invoice_number} | ${buyer.company_name}`;
-      document.title = invoiceTitle;
-    }
-    return () => {
-      // Reset title when component unmounts
-      document.title = 'RK Inventory Hub';
-    };
-  }, [sale, buyer]);
-
-  if (!sale || !buyer) return <div className="p-8">Loading invoice...</div>;
-
-  const totalTax = (sale.cgst_amount || 0) + (sale.sgst_amount || 0) + (sale.igst_amount || 0);
-  const basicAmount = (sale.subtotal || 0) - (sale.discount_amount || 0);
+function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, totalTax }: InvoiceCopyProps) {
+  const copyLabels = {
+    original: 'ORIGINAL COPY',
+    duplicate: 'DUPLICATE COPY',
+    triplicate: 'TRIPLICATE COPY',
+    quadruplicate: 'QUADRUPLICATE COPY'
+  };
 
   return (
-    <div className="w-full bg-white text-black mx-auto print:scale-100 print:bg-white print:text-black" style={{ maxWidth: '1000px', height: 'auto', padding: '10px' }}>
+    <div className="w-full bg-white text-black mx-auto print:scale-100 print:bg-white print:text-black page-break-after" style={{ maxWidth: '1000px', height: 'auto', padding: '10px' }}>
       {/* Header Section */}
       <div className="border-4 border-black mb-0">
         {/* Top Company Info */}
@@ -84,7 +74,7 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
             <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">rk.enterprises.tn.2025@gmail.com</p>
           </div>
           <div className="flex-1 text-center sm:text-right print:text-right space-y-0 w-full sm:w-auto print:w-auto">
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold">ORIGINAL COPY</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold">{copyLabels[copyType]}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words"><span className="font-bold">GSTIN NO :</span> 33BLQPP6954N1Z7</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px]"><span className="font-bold">Phone :</span> +91 7904982523</p>
           </div>
@@ -305,12 +295,19 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
 
       {/* Print Styles */}
       <style>{`
+        @page {
+          page-break-after: always;
+        }
         @media print {
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             background: white !important;
             color: black !important;
+          }
+          .page-break-after {
+            page-break-after: always;
+            break-after: page;
           }
           html, body {
             margin: 0 !important;
@@ -421,5 +418,57 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
         }
       `}</style>
     </div>
+    );
+  }
+
+export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
+  const { data: sales } = useSales();
+  const { data: buyers } = useBuyers();
+  const { data: products } = useProducts();
+
+  const sale = sales?.find((s) => s.id === saleId);
+  const buyer = buyers?.find((b) => b.id === sale?.buyer_id);
+
+  useEffect(() => {
+    // Delay print to ensure all content is rendered
+    const timer = setTimeout(() => {
+      window.print();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (sale && buyer) {
+      const invoiceTitle = `${sale.invoice_number} | ${buyer.company_name}`;
+      document.title = invoiceTitle;
+    }
+    return () => {
+      // Reset title when component unmounts
+      document.title = 'RK Inventory Hub';
+    };
+  }, [sale, buyer]);
+
+  if (!sale || !buyer) return <div className="p-8">Loading invoice...</div>;
+
+  const totalTax = (sale.cgst_amount || 0) + (sale.sgst_amount || 0) + (sale.igst_amount || 0);
+  const basicAmount = (sale.subtotal || 0) - (sale.discount_amount || 0);
+
+  const copyTypes: Array<'original' | 'duplicate' | 'triplicate' | 'quadruplicate'> = ['original', 'duplicate', 'triplicate', 'quadruplicate'];
+
+  return (
+    <>
+      {copyTypes.map((copyType) => (
+        <InvoiceCopy
+          key={copyType}
+          saleId={saleId}
+          copyType={copyType}
+          sale={sale}
+          buyer={buyer}
+          products={products}
+          basicAmount={basicAmount}
+          totalTax={totalTax}
+        />
+      ))}
+    </>
   );
 }
