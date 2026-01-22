@@ -50,3 +50,33 @@ export function generatePurchaseNumber(sequenceNumber: number): string {
   const paddedNumber = String(sequenceNumber).padStart(3, '0');
   return `PO\\${paddedNumber}\\${fy}`;
 }
+
+/**
+ * Generates a supplier code in the format: RK/SU/001
+ * @param sequenceNumber - The sequential number for the supplier
+ * @returns Supplier code string
+ */
+export function generateSupplierCode(sequenceNumber: number): string {
+  const paddedNumber = String(sequenceNumber).padStart(3, '0');
+  return `RK/SU/${paddedNumber}`;
+}
+
+/**
+ * Generates a buyer code in the format: RK/BU/001
+ * @param sequenceNumber - The sequential number for the buyer
+ * @returns Buyer code string
+ */
+export function generateBuyerCode(sequenceNumber: number): string {
+  const paddedNumber = String(sequenceNumber).padStart(3, '0');
+  return `RK/BU/${paddedNumber}`;
+}
+
+/**
+ * Generates a product code in the format: RK-PD-001
+ * @param sequenceNumber - The sequential number for the product
+ * @returns Product code string
+ */
+export function generateProductCode(sequenceNumber: number): string {
+  const paddedNumber = String(sequenceNumber).padStart(3, '0');
+  return `RK-PD-${paddedNumber}`;
+}

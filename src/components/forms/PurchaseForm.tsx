@@ -70,7 +70,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('');
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
@@ -85,13 +85,14 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
 
   const addItem = () => {
     const product = products?.find((p) => p.id === selectedProduct);
-    if (!product || quantity <= 0) return;
+    const qty = Number(quantity);
+    if (!product || !quantity || qty <= 0) return;
 
     const unitPrice = product.purchase_price || 0;
     const taxPercent = product.tax_percent || 0;
     const discountPercent = product.discount_percent || 0;
 
-    const subtotal = quantity * unitPrice;
+    const subtotal = qty * unitPrice;
     const discountAmount = subtotal * (discountPercent / 100);
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = taxableAmount * (taxPercent / 100);
@@ -100,7 +101,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
     const newItem: PurchaseItem = {
       product_id: product.id,
       product_name: product.name,
-      quantity,
+      quantity: qty,
       unit_price: unitPrice,
       tax_percent: taxPercent,
       discount_percent: discountPercent,
@@ -111,7 +112,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
 
     setItems([...items, newItem]);
     setSelectedProduct('');
-    setQuantity(1);
+    setQuantity('');
   };
 
   const removeItem = (index: number) => {
@@ -263,7 +264,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
                 type="number"
                 min="1"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onChange={(e) => setQuantity(e.target.value === '' ? '' : e.target.value)}
               />
             </div>
             <Button type="button" onClick={addItem} disabled={!selectedProduct}>

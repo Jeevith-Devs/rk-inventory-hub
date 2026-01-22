@@ -31,7 +31,7 @@ import { useSales, useDeleteSale } from '@/hooks/useSales';
 import { useBuyers } from '@/hooks/useBuyers';
 import { SaleForm } from '@/components/forms/SaleForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye, FileText, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, FileText, Trash2, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function Sales() {
@@ -41,6 +41,7 @@ export default function Sales() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<string | null>(null);
   const [viewingSale, setViewingSale] = useState<string | null>(null);
   const [deletingSale, setDeletingSale] = useState<{ id: string; invoice_number: string } | null>(null);
 
@@ -54,6 +55,7 @@ export default function Sales() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+    setEditingSale(null);
   };
 
   const handleDelete = () => {
@@ -135,11 +137,23 @@ export default function Sales() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setViewingSale(sale.id)}
+                        title="View Details"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingSale(sale.id);
+                          setIsFormOpen(true);
+                        }}
+                        title="Edit Sale"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
                         size="icon"
                         onClick={() => navigate(`/invoice/${sale.id}`)}
                         title="Print Invoice"
@@ -169,7 +183,11 @@ export default function Sales() {
           <DialogHeader>
             <DialogTitle>New Sales Invoice</DialogTitle>
           </DialogHeader>
-          <SaleForm onSuccess={handleCloseForm} onCancel={handleCloseForm} />
+          <SaleForm
+            saleId={editingSale || undefined}
+            onSuccess={handleCloseForm}
+            onCancel={handleCloseForm}
+          />
         </DialogContent>
       </Dialog>
 

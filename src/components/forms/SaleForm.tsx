@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,10 +35,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useCreateSale } from '@/hooks/useSales';
+import { useCreateSale, useUpdateSale, useSale } from '@/hooks/useSales';
 import { useBuyers, useCreateBuyer, type BuyerInput } from '@/hooks/useBuyers';
 import { useProducts } from '@/hooks/useProducts';
-import { useNextInvoiceNumber } from '@/hooks/useInvoiceSequence';
+import { useNextInvoiceNumber, useNextBuyerCode } from '@/hooks/useInvoiceSequence';
 import { Loader2, Plus, Trash2, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Constants } from '@/integrations/supabase/types';
@@ -91,20 +91,24 @@ interface SaleItem {
 }
 
 interface SaleFormProps {
+  saleId?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
+export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
   const { data: buyers } = useBuyers();
   const { data: products } = useProducts();
   const createSale = useCreateSale();
+  const updateSale = useUpdateSale();
   const createBuyer = useCreateBuyer();
   const { data: invoiceNumber } = useNextInvoiceNumber();
+  const { data: existingSale } = useSale(saleId || '');
 
+  const isEditMode = !!saleId;
   const [items, setItems] = useState<SaleItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('');
   const [showNewBuyerDialog, setShowNewBuyerDialog] = useState(false);
   const [newBuyerMode, setNewBuyerMode] = useState(false);
 
@@ -121,17 +125,54 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       dispatch_date: '',
       purchase_order_no: '',
       purchase_order_date: '',
-      transport_charges: 0,
+      transport_charges: '',
       notes: '',
     },
   });
 
+  // Load existing sale data when editing
+  useEffect(() => {
+    if (isEditMode && existingSale) {
+      form.reset({
+        buyer_id: existingSale.buyer_id,
+        sale_date: existingSale.sale_date,
+        is_gst_invoice: existingSale.is_gst_invoice ?? true,
+        payment_mode: existingSale.payment_mode || 'Credit',
+        transport_mode: existingSale.transport_mode || 'Road',
+        vehicle_no: existingSale.vehicle_no || '',
+        lr_no: existingSale.lr_no || '',
+        dispatch_date: existingSale.dispatch_date || '',
+        purchase_order_no: existingSale.purchase_order_no || '',
+        purchase_order_date: existingSale.purchase_order_date || '',
+        transport_charges: existingSale.transport_charges || 0,
+        notes: existingSale.notes || '',
+      });
+
+      // Load existing items
+      if (existingSale.sale_items) {
+        const loadedItems: SaleItem[] = existingSale.sale_items.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.products?.name || '',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_percent: item.tax_percent || 0,
+          discount_percent: item.discount_percent || 0,
+          tax_amount: item.tax_amount || 0,
+          discount_amount: item.discount_amount || 0,
+          total_amount: item.total_amount,
+        }));
+        setItems(loadedItems);
+      }
+    }
+  }, [isEditMode, existingSale, form]);
+
   const addItem = () => {
     const product = products?.find((p) => p.id === selectedProduct);
-    if (!product || quantity <= 0) return;
+    const qty = Number(quantity);
+    if (!product || !quantity || qty <= 0) return;
 
     // Check stock availability
-    if ((product.current_stock || 0) < quantity) {
+    if ((product.current_stock || 0) < qty) {
       alert(`Insufficient stock. Available: ${product.current_stock}`);
       return;
     }
@@ -140,7 +181,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
     const taxPercent = product.tax_percent || 0;
     const discountPercent = product.discount_percent || 0;
 
-    const subtotal = quantity * unitPrice;
+    const subtotal = qty * unitPrice;
     const discountAmount = subtotal * (discountPercent / 100);
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = taxableAmount * (taxPercent / 100);
@@ -149,7 +190,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
     const newItem: SaleItem = {
       product_id: product.id,
       product_name: product.name,
-      quantity,
+      quantity: qty,
       unit_price: unitPrice,
       tax_percent: taxPercent,
       discount_percent: discountPercent,
@@ -160,7 +201,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
 
     setItems([...items, newItem]);
     setSelectedProduct('');
-    setQuantity(1);
+    setQuantity('');
   };
 
   const removeItem = (index: number) => {
@@ -182,52 +223,60 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
 
   const handleSubmit = (data: SaleFormData) => {
     if (items.length === 0) return;
-    if (!invoiceNumber) {
-      alert('Generating invoice number, please wait...');
-      return;
-    }
 
     const halfTax = totals.tax / 2;
 
-    createSale.mutate(
-      {
-        sale: {
-          invoice_number: invoiceNumber,
-          buyer_id: data.buyer_id,
-          sale_date: data.sale_date,
-          is_gst_invoice: data.is_gst_invoice,
-          payment_mode: data.payment_mode,
-          transport_mode: data.transport_mode,
-          vehicle_no: data.vehicle_no || null,
-          lr_no: data.lr_no || null,
-          dispatch_date: data.dispatch_date || null,
-          purchase_order_no: data.purchase_order_no || null,
-          purchase_order_date: data.purchase_order_date || null,
-          transport_charges: transportCharges,
-          subtotal: totals.subtotal,
-          discount_amount: totals.discount,
-          cgst_amount: data.is_gst_invoice ? halfTax : 0,
-          sgst_amount: data.is_gst_invoice ? halfTax : 0,
-          igst_amount: data.is_gst_invoice ? 0 : totals.tax,
-          total_amount: totals.total,
-          round_off: 0,
-          created_by: null,
-          grand_total: grandTotal,
-          notes: data.notes || null,
-        },
-        items: items.map((item) => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          tax_percent: item.tax_percent,
-          discount_percent: item.discount_percent,
-          tax_amount: item.tax_amount,
-          discount_amount: item.discount_amount,
-          total_amount: item.total_amount,
-        })),
-      },
-      { onSuccess }
-    );
+    const saleData = {
+      invoice_number: isEditMode ? existingSale!.invoice_number : invoiceNumber!,
+      buyer_id: data.buyer_id,
+      sale_date: data.sale_date,
+      is_gst_invoice: data.is_gst_invoice,
+      payment_mode: data.payment_mode,
+      transport_mode: data.transport_mode,
+      vehicle_no: data.vehicle_no || null,
+      lr_no: data.lr_no || null,
+      dispatch_date: data.dispatch_date || null,
+      purchase_order_no: data.purchase_order_no || null,
+      purchase_order_date: data.purchase_order_date || null,
+      transport_charges: transportCharges,
+      subtotal: totals.subtotal,
+      discount_amount: totals.discount,
+      cgst_amount: data.is_gst_invoice ? halfTax : 0,
+      sgst_amount: data.is_gst_invoice ? halfTax : 0,
+      igst_amount: data.is_gst_invoice ? 0 : totals.tax,
+      total_amount: totals.total,
+      round_off: 0,
+      created_by: null,
+      grand_total: grandTotal,
+      notes: data.notes || null,
+    };
+
+    const itemsData = items.map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      tax_percent: item.tax_percent,
+      discount_percent: item.discount_percent,
+      tax_amount: item.tax_amount,
+      discount_amount: item.discount_amount,
+      total_amount: item.total_amount,
+    }));
+
+    if (isEditMode) {
+      updateSale.mutate(
+        { saleId: saleId!, sale: saleData, items: itemsData },
+        { onSuccess }
+      );
+    } else {
+      if (!invoiceNumber) {
+        alert('Generating invoice number, please wait...');
+        return;
+      }
+      createSale.mutate(
+        { sale: saleData, items: itemsData },
+        { onSuccess }
+      );
+    }
   };
 
   return (
@@ -470,7 +519,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                 type="number"
                 min="1"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                onChange={(e) => setQuantity(e.target.value === '' ? '' : e.target.value)}
               />
             </div>
             <Button type="button" onClick={addItem} disabled={!selectedProduct}>
@@ -581,9 +630,9 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={items.length === 0 || createSale.isPending}>
-            {createSale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Invoice
+          <Button type="submit" disabled={items.length === 0 || createSale.isPending || updateSale.isPending}>
+            {(createSale.isPending || updateSale.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditMode ? 'Update Invoice' : 'Create Invoice'}
           </Button>
         </div>
 
@@ -616,10 +665,12 @@ function NewCustomerDialog({
   isLoading,
 }: NewCustomerDialogProps) {
   const createBuyer = useCreateBuyer();
+  const { data: nextBuyerCode } = useNextBuyerCode();
+
   const buyerForm = useForm<BuyerFormData>({
     resolver: zodResolver(buyerSchema),
     defaultValues: {
-      buyer_code: `BUY-${Date.now().toString().slice(-6)}`,
+      buyer_code: '',
       company_name: '',
       contact_person: '',
       billing_address: '',
@@ -635,6 +686,13 @@ function NewCustomerDialog({
       is_active: true,
     },
   });
+
+  // Set the buyer code when dialog opens
+  useEffect(() => {
+    if (open && nextBuyerCode) {
+      buyerForm.setValue('buyer_code', nextBuyerCode);
+    }
+  }, [open, nextBuyerCode, buyerForm]);
 
   const handleSubmit = (data: BuyerFormData) => {
     const buyerInput: BuyerInput = {

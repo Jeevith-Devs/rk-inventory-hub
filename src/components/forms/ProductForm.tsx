@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Product, ProductInput, useCategories } from '@/hooks/useProducts';
 import { useSuppliers, useCreateSupplier, type SupplierInput } from '@/hooks/useSuppliers';
+import { useNextSupplierCode, useNextProductCode } from '@/hooks/useInvoiceSequence';
 import { Loader2, Plus, UserPlus } from 'lucide-react';
 import { Constants } from '@/integrations/supabase/types';
 
@@ -82,28 +83,36 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
   const { data: categories } = useCategories();
   const { data: suppliers } = useSuppliers();
   const createSupplier = useCreateSupplier();
+  const { data: nextProductCode } = useNextProductCode();
 
   const [showNewSupplierDialog, setShowNewSupplierDialog] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      product_code: product?.product_code || `PRD-${Date.now().toString().slice(-6)}`,
+      product_code: product?.product_code || '',
       name: product?.name || '',
       description: product?.description || '',
       category_id: product?.category_id || '',
       default_supplier_id: product?.default_supplier_id || '',
       unit: product?.unit || 'PCS',
       hsn_code: product?.hsn_code || '',
-      purchase_price: product?.purchase_price || 0,
-      selling_price: product?.selling_price || 0,
-      tax_percent: product?.tax_percent || 18,
-      discount_percent: product?.discount_percent || 0,
-      current_stock: product?.current_stock || 0,
-      reorder_level: product?.reorder_level || 10,
+      purchase_price: product?.purchase_price ?? 0,
+      selling_price: product?.selling_price ?? 0,
+      tax_percent: product?.tax_percent ?? 18,
+      discount_percent: product?.discount_percent ?? 0,
+      current_stock: product?.current_stock ?? 0,
+      reorder_level: product?.reorder_level ?? 0,
       status: product?.status || 'active',
     },
   });
+
+  // Set the product code when dialog opens for new products
+  useEffect(() => {
+    if (!product && nextProductCode) {
+      form.setValue('product_code', nextProductCode);
+    }
+  }, [product, nextProductCode, form]);
 
   const handleSubmit = (data: ProductFormData) => {
     onSubmit({
@@ -136,7 +145,7 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
               <FormItem>
                 <FormLabel>Product Code *</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled={!!product} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -436,10 +445,12 @@ function NewSupplierDialog({
   isLoading,
 }: NewSupplierDialogProps) {
   const createSupplier = useCreateSupplier();
+  const { data: nextSupplierCode } = useNextSupplierCode();
+
   const supplierForm = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
-      supplier_code: `SUP-${Date.now().toString().slice(-6)}`,
+      supplier_code: '',
       company_name: '',
       contact_person: '',
       address: '',
@@ -458,6 +469,13 @@ function NewSupplierDialog({
       is_active: true,
     },
   });
+
+  // Set the supplier code when dialog opens
+  useEffect(() => {
+    if (open && nextSupplierCode) {
+      supplierForm.setValue('supplier_code', nextSupplierCode);
+    }
+  }, [open, nextSupplierCode, supplierForm]);
 
   const handleSubmit = (data: SupplierFormData) => {
     const supplierInput: SupplierInput = {

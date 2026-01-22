@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Supplier, SupplierInput } from '@/hooks/useSuppliers';
+import { useNextSupplierCode } from '@/hooks/useInvoiceSequence';
 import { Loader2 } from 'lucide-react';
 
 const supplierSchema = z.object({
@@ -46,10 +48,12 @@ interface SupplierFormProps {
 }
 
 export function SupplierForm({ supplier, onSubmit, isLoading, onCancel }: SupplierFormProps) {
+  const { data: nextSupplierCode } = useNextSupplierCode();
+  
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
-      supplier_code: supplier?.supplier_code || `SUP-${Date.now().toString().slice(-6)}`,
+      supplier_code: supplier?.supplier_code || '',
       company_name: supplier?.company_name || '',
       contact_person: supplier?.contact_person || '',
       address: supplier?.address || '',
@@ -68,6 +72,13 @@ export function SupplierForm({ supplier, onSubmit, isLoading, onCancel }: Suppli
       is_active: supplier?.is_active ?? true,
     },
   });
+
+  // Set the supplier code when creating a new supplier
+  useEffect(() => {
+    if (!supplier && nextSupplierCode) {
+      form.setValue('supplier_code', nextSupplierCode);
+    }
+  }, [supplier, nextSupplierCode, form]);
 
   const handleSubmit = (data: SupplierFormData) => {
     onSubmit({

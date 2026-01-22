@@ -48,7 +48,7 @@ export interface SaleItem {
 }
 
 export interface SaleWithItems extends Sale {
-  buyers?: { 
+  buyers?: {
     company_name: string;
     billing_address: string | null;
     delivery_address: string | null;
@@ -153,6 +153,55 @@ export const useDeleteSale = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Error deleting sale', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+interface UpdateSaleInput {
+  saleId: string;
+  sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>;
+  items: Omit<SaleItem, 'id' | 'sale_id' | 'created_at'>[];
+}
+
+export const useUpdateSale = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ saleId, sale, items }: UpdateSaleInput) => {
+      // Update sale
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .update(sale)
+        .eq('id', saleId)
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Delete existing sale items
+      await supabase.from('sale_items').delete().eq('sale_id', saleId);
+
+      // Create new sale items
+      const itemsWithSaleId = items.map(item => ({
+        ...item,
+        sale_id: saleId,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(itemsWithSaleId);
+
+      if (itemsError) throw itemsError;
+
+      return saleData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Sale updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating sale', description: error.message, variant: 'destructive' });
     },
   });
 };

@@ -52,18 +52,25 @@ const reportItems = [
 
 export function AppSidebar() {
   const { signOut, user, userRole } = useAuth();
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const collapsed = state === 'collapsed';
 
   const isActive = (path: string) => location.pathname === path;
   const isGroupActive = (items: { url: string }[]) => items.some(item => isActive(item.url));
 
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   const NavItem = ({ item }: { item: { title: string; url: string; icon: React.ComponentType<{ className?: string }> } }) => (
     <SidebarMenuItem>
       <SidebarMenuButton asChild>
         <NavLink
           to={item.url}
+          onClick={handleNavClick}
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-sidebar-accent',
             isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'

@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Buyer, BuyerInput } from '@/hooks/useBuyers';
+import { useNextBuyerCode } from '@/hooks/useInvoiceSequence';
 import { Loader2 } from 'lucide-react';
 
 const buyerSchema = z.object({
@@ -43,10 +45,12 @@ interface BuyerFormProps {
 }
 
 export function BuyerForm({ buyer, onSubmit, isLoading, onCancel }: BuyerFormProps) {
+  const { data: nextBuyerCode } = useNextBuyerCode();
+  
   const form = useForm<BuyerFormData>({
     resolver: zodResolver(buyerSchema),
     defaultValues: {
-      buyer_code: buyer?.buyer_code || `BUY-${Date.now().toString().slice(-6)}`,
+      buyer_code: buyer?.buyer_code || '',
       company_name: buyer?.company_name || '',
       contact_person: buyer?.contact_person || '',
       billing_address: buyer?.billing_address || '',
@@ -58,10 +62,17 @@ export function BuyerForm({ buyer, onSubmit, isLoading, onCancel }: BuyerFormPro
       email: buyer?.email || '',
       gst_no: buyer?.gst_no || '',
       payment_terms: buyer?.payment_terms || '',
-      credit_limit: buyer?.credit_limit || 0,
+      credit_limit: buyer?.credit_limit ?? '',
       is_active: buyer?.is_active ?? true,
     },
   });
+
+  // Set the buyer code when creating a new buyer
+  useEffect(() => {
+    if (!buyer && nextBuyerCode) {
+      form.setValue('buyer_code', nextBuyerCode);
+    }
+  }, [buyer, nextBuyerCode, form]);
 
   const handleSubmit = (data: BuyerFormData) => {
     onSubmit({
