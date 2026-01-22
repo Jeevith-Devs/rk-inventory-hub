@@ -103,7 +103,7 @@ export function SupplierForm({ supplier, onSubmit, isLoading, onCancel }: Suppli
               <FormItem>
                 <FormLabel>Supplier Code *</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled={!!supplier} />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

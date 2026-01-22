@@ -113,11 +113,25 @@ export const useDeleteSupplier = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('suppliers').delete().eq('id', id);
-      if (error) throw error;
+      // First, remove this supplier as default_supplier_id from all products
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ default_supplier_id: null })
+        .eq('default_supplier_id', id);
+
+      if (updateError) throw updateError;
+
+      // Then delete the supplier
+      const { error: deleteError } = await supabase
+        .from('suppliers')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({ title: 'Supplier deleted successfully' });
     },
     onError: (error: Error) => {
