@@ -31,6 +31,7 @@ import {
 import { useCreatePurchase } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
+import { useNextPurchaseNumber } from '@/hooks/useInvoiceSequence';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -65,6 +66,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
   const { data: suppliers } = useSuppliers();
   const { data: products } = useProducts();
   const createPurchase = useCreatePurchase();
+  const { data: purchaseNumber } = useNextPurchaseNumber();
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
@@ -128,8 +130,10 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
 
   const handleSubmit = (data: PurchaseFormData) => {
     if (items.length === 0) return;
-
-    const purchaseNumber = `PUR-${Date.now().toString().slice(-8)}`;
+    if (!purchaseNumber) {
+      alert('Generating purchase number, please wait...');
+      return;
+    }
 
     createPurchase.mutate(
       {

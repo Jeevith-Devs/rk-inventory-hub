@@ -283,13 +283,9 @@ function SaleDetails({ saleId }: { saleId: string }) {
           <span>Transport:</span>
           <span>₹{sale.transport_charges?.toLocaleString()}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Round Off:</span>
-          <span>₹{sale.round_off?.toFixed(2)}</span>
-        </div>
         <div className="flex justify-between font-bold border-t pt-2 mt-2">
           <span>Grand Total:</span>
-          <span>₹{sale.grand_total?.toLocaleString()}</span>
+          <span>₹{sale.grand_total?.toFixed(2)}</span>
         </div>
       </div>
       {sale.notes && (

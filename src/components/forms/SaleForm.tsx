@@ -38,6 +38,7 @@ import {
 import { useCreateSale } from '@/hooks/useSales';
 import { useBuyers, useCreateBuyer, type BuyerInput } from '@/hooks/useBuyers';
 import { useProducts } from '@/hooks/useProducts';
+import { useNextInvoiceNumber } from '@/hooks/useInvoiceSequence';
 import { Loader2, Plus, Trash2, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Constants } from '@/integrations/supabase/types';
@@ -99,6 +100,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
   const { data: products } = useProducts();
   const createSale = useCreateSale();
   const createBuyer = useCreateBuyer();
+  const { data: invoiceNumber } = useNextInvoiceNumber();
 
   const [items, setItems] = useState<SaleItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
@@ -177,12 +179,14 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
 
   const transportCharges = form.watch('transport_charges') || 0;
   const grandTotal = totals.total + transportCharges;
-  const roundOff = Math.round(grandTotal) - grandTotal;
 
   const handleSubmit = (data: SaleFormData) => {
     if (items.length === 0) return;
+    if (!invoiceNumber) {
+      alert('Generating invoice number, please wait...');
+      return;
+    }
 
-    const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
     const halfTax = totals.tax / 2;
 
     createSale.mutate(
@@ -206,9 +210,9 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
           sgst_amount: data.is_gst_invoice ? halfTax : 0,
           igst_amount: data.is_gst_invoice ? 0 : totals.tax,
           total_amount: totals.total,
-          round_off: roundOff,
+          round_off: 0,
           created_by: null,
-          grand_total: Math.round(grandTotal),
+          grand_total: grandTotal,
           notes: data.notes || null,
         },
         items: items.map((item) => ({
@@ -550,13 +554,9 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                 <span>Transport:</span>
                 <span>₹{transportCharges.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Round Off:</span>
-                <span>₹{roundOff.toFixed(2)}</span>
-              </div>
               <div className="flex justify-between font-bold border-t pt-2">
                 <span>Grand Total:</span>
-                <span>₹{Math.round(grandTotal).toLocaleString()}</span>
+                <span>₹{grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>

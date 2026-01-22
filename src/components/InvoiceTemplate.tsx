@@ -237,10 +237,6 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
               )}
             </tbody>
           </table>
-          <div className="flex justify-end p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold border-t border-black">
-            <span className="mr-2">Round Off (-):</span>
-            <span className="w-16 text-right">{(sale.round_off || 0).toFixed(2)}</span>
-          </div>
         </div>
 
         {/* Grand Total */}
