@@ -14,7 +14,7 @@ function convertNumberToWords(num: number): string {
   const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 
-  if (num === 0) return 'Zero';
+  if (num === 0) return 'Zero Rupees Only';
 
   function convertLessThanThousand(n: number): string {
     if (n === 0) return '';
@@ -24,21 +24,39 @@ function convertNumberToWords(num: number): string {
     else return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
   }
 
-  if (num < 1000) {
-    return convertLessThanThousand(num) + ' Rupees Only';
-  } else if (num < 100000) {
-    const thousands = Math.floor(num / 1000);
-    const remainder = num % 1000;
-    return convertLessThanThousand(thousands) + ' Thousand' + (remainder > 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees Only';
-  } else if (num < 10000000) {
-    const lakhs = Math.floor(num / 100000);
-    const remainder = num % 100000;
-    return convertLessThanThousand(lakhs) + ' Lakh' + (remainder > 0 ? ' ' + convertNumberToWords(remainder).replace(' Rupees Only', '') : '') + ' Rupees Only';
+  // Separate rupees and paise
+  const rupees = Math.floor(num);
+  const paise = Math.round((num - rupees) * 100);
+
+  let result = '';
+
+  // Convert rupees part
+  if (rupees === 0) {
+    result = 'Zero Rupees';
+  } else if (rupees < 1000) {
+    result = convertLessThanThousand(rupees) + ' Rupees';
+  } else if (rupees < 100000) {
+    const thousands = Math.floor(rupees / 1000);
+    const remainder = rupees % 1000;
+    result = convertLessThanThousand(thousands) + ' Thousand' + (remainder > 0 ? ' ' + convertLessThanThousand(remainder) : '') + ' Rupees';
+  } else if (rupees < 10000000) {
+    const lakhs = Math.floor(rupees / 100000);
+    const remainder = rupees % 100000;
+    const remainderText = remainder > 0 ? ' ' + convertNumberToWords(remainder).replace(' Rupees', '').replace(' and ' + convertLessThanThousand(Math.round((remainder - Math.floor(remainder)) * 100)) + ' Paise', '').replace(' Only', '') : '';
+    result = convertLessThanThousand(lakhs) + ' Lakh' + remainderText + ' Rupees';
   } else {
-    const crores = Math.floor(num / 10000000);
-    const remainder = num % 10000000;
-    return convertLessThanThousand(crores) + ' Crore' + (remainder > 0 ? ' ' + convertNumberToWords(remainder).replace(' Rupees Only', '') : '') + ' Rupees Only';
+    const crores = Math.floor(rupees / 10000000);
+    const remainder = rupees % 10000000;
+    const remainderText = remainder > 0 ? ' ' + convertNumberToWords(remainder).replace(' Rupees', '').replace(' and ' + convertLessThanThousand(Math.round((remainder - Math.floor(remainder)) * 100)) + ' Paise', '').replace(' Only', '') : '';
+    result = convertLessThanThousand(crores) + ' Crore' + remainderText + ' Rupees';
   }
+
+  // Add paise if present
+  if (paise > 0) {
+    result += ' and ' + convertLessThanThousand(paise) + ' Paise';
+  }
+
+  return result + ' Only';
 }
 
 interface InvoiceCopyProps {
@@ -70,7 +88,8 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
           </div>
           <div className="flex-1 text-center sm:text-center print:text-center w-full sm:w-auto print:w-auto">
             <h2 className="text-xs sm:text-sm md:text-base print:text-sm font-bold">RK ENTERPRISES</h2>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">No.23/2,Part,GreenAcres,2ndLayout,Mathur,Sriperumbidur Taluk,Kanchipruram Dist-602105</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">No.23/2,Part,GreenAcres,2ndLayout,Mathur,</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">Sriperumbidur Taluk,Kanchipruram Dist-602105</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">rk.enterprises.tn.2025@gmail.com</p>
           </div>
           <div className="flex-1 text-center sm:text-right print:text-right space-y-0 w-full sm:w-auto print:w-auto">
@@ -92,7 +111,6 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
             <div className="border-b-2 md:border-b-0 print:border-b-0 md:border-r-2 print:border-r-2 border-black p-2">
               <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold">To.</p>
               <p className="text-[9px] sm:text-[10px] print:text-[10px] mt-1 font-semibold break-words print:break-words">{buyer.company_name}</p>
-              {buyer.contact_person && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{buyer.contact_person}</p>}
               {buyer.billing_address && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{buyer.billing_address}</p>}
               {buyer.city && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{buyer.city}, {buyer.state} {buyer.pincode}</p>}
               {buyer.phone && <p className="text-[9px] sm:text-[10px] print:text-[10px]">Phone: {buyer.phone}</p>}
@@ -125,6 +143,12 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                 <div className="border-b border-black pb-0.5">
                   <p className="text-right">{sale.purchase_order_date ? format(new Date(sale.purchase_order_date), 'dd/MM/yyyy') : '-'}</p>
                 </div>
+                <div className="border-b border-black pb-0.5">
+                  <p className="font-bold">Transport Mode :</p>
+                </div>
+                <div className="border-b border-black pb-0.5">
+                  <p className="text-right">{sale.transport_mode || '-'}</p>
+                </div>
               </div>
             </div>
 
@@ -141,7 +165,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                   <p className="font-bold">Contact Person:</p>
                 </div>
                 <div className="text-right break-words print:break-words">
-                  {buyer.contact_person || '-'}
+                  {buyer.contact_person ? `Mr ${buyer.contact_person}` : '-'}
                 </div>
                 <div>
                   <p className="font-bold">Contact Number:</p>
@@ -157,7 +181,6 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
           <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-0 border-t-2 border-black">
             <div className="border-b-2 md:border-b-0 print:border-b-0 md:border-r-2 print:border-r-2 border-black p-2 text-[9px] sm:text-[10px] print:text-[10px]">
               <p><span className="font-bold">Party's GSTIN No:</span> <span className="break-all print:break-all">{buyer.gst_no || '-'}</span></p>
-              <p><span className="font-bold">Transport Mode :</span> {sale.transport_mode || '-'}</p>
             </div>
             <div className="p-2"></div>
           </div>
@@ -199,7 +222,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                 </tr>
               )}
               {/* Empty rows */}
-              {sale.sale_items && sale.sale_items.length < 2 && 
+              {sale.sale_items && sale.sale_items.length < 2 &&
                 Array(2 - (sale.sale_items?.length || 0)).fill(0).map((_, i) => (
                   <tr key={`empty-${i}`} className="border-b border-black">
                     <td colSpan={7} className="p-2.5"></td>
@@ -221,18 +244,21 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
               {sale.sgst_amount ? (
                 <>
                   <tr className="border-b border-black">
-                    <td colSpan={7} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">SGST.</td>
+                    <td colSpan={6} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">SGST %</td>
                     <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right">{((sale.sgst_amount / basicAmount) * 100).toFixed(2)}%</td>
+                    <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right font-bold">₹{sale.sgst_amount.toFixed(2)}</td>
                   </tr>
                   <tr className="border-b border-black">
-                    <td colSpan={7} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">CGST</td>
+                    <td colSpan={6} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">CGST %</td>
                     <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right">{((sale.cgst_amount / basicAmount) * 100).toFixed(2)}%</td>
+                    <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right font-bold">₹{sale.cgst_amount.toFixed(2)}</td>
                   </tr>
                 </>
               ) : (
                 <tr className="border-b border-black">
-                  <td colSpan={7} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">IGST.</td>
+                  <td colSpan={6} className="p-1 text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">IGST %</td>
                   <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right">{((sale.igst_amount / basicAmount) * 100).toFixed(2)}%</td>
+                  <td className="border-l-2 border-black p-1 text-[9px] sm:text-[10px] print:text-[10px] text-right font-bold">₹{sale.igst_amount.toFixed(2)}</td>
                 </tr>
               )}
             </tbody>
@@ -242,7 +268,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
         {/* Grand Total */}
         <div className="border-b-2 border-black p-2">
           <div className="flex flex-col sm:flex-row print:flex-row justify-between items-start sm:items-center print:items-center mb-1 gap-1 print:gap-0">
-            <span className="text-[9px] sm:text-[10px] print:text-[10px] font-bold break-words print:break-words">Total In Words: <span className="font-normal">{convertNumberToWords(Math.floor(sale.grand_total || 0))}</span></span>
+            <span className="text-[9px] sm:text-[10px] print:text-[10px] font-bold break-words print:break-words">Total In Words: <span className="font-normal">{convertNumberToWords(sale.grand_total || 0)}</span></span>
           </div>
           <div className="flex justify-between items-center mt-1">
             <span></span>
@@ -258,8 +284,8 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
           <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-1">Terms of Sales :</p>
           <div className="text-[8px] sm:text-[9px] print:text-[9px] space-y-0">
             <p>1&nbsp;&nbsp;&nbsp;&nbsp;Goods Once Sold Will Not be Taken Back</p>
-            <p>2&nbsp;&nbsp;&nbsp;&nbsp;Credit Period : 30 Days Subject to </p>
-            <p>3&nbsp;&nbsp;&nbsp;&nbsp;'TamilNadu'Jurisdiction Only</p>
+            <p>2&nbsp;&nbsp;&nbsp;&nbsp;Credit Period : 30 Days  </p>
+            <p>3&nbsp;&nbsp;&nbsp;&nbsp;Subject to TamilNadu Jurisdiction Only</p>
           </div>
         </div>
 
@@ -414,8 +440,8 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
         }
       `}</style>
     </div>
-    );
-  }
+  );
+}
 
 export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
   const { data: sales } = useSales();
