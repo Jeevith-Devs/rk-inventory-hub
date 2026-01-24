@@ -30,7 +30,8 @@ import { usePurchases, useDeletePurchase } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { PurchaseForm } from '@/components/forms/PurchaseForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, Trash2, Download } from 'lucide-react';
+import { exportPurchasesToExcel } from '@/lib/excelExport';
 
 export default function Purchases() {
   const { data: purchases, isLoading } = usePurchases();
@@ -67,10 +68,20 @@ export default function Purchases() {
     <PageContainer
       title="Stock In (Purchases)"
       actions={
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Purchase
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => purchases && exportPurchasesToExcel(purchases)}
+            disabled={!purchases || purchases.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Purchase
+          </Button>
+        </div>
       }
     >
       {/* Search */}

@@ -31,8 +31,9 @@ import { useSales, useDeleteSale } from '@/hooks/useSales';
 import { useBuyers } from '@/hooks/useBuyers';
 import { SaleForm } from '@/components/forms/SaleForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye, FileText, Trash2, Pencil } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, FileText, Trash2, Pencil, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { exportSalesToExcel } from '@/lib/excelExport';
 
 export default function Sales() {
   const { data: sales, isLoading } = useSales();
@@ -70,10 +71,20 @@ export default function Sales() {
     <PageContainer
       title="Stock Out (Sales)"
       actions={
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Invoice
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => sales && exportSalesToExcel(sales)}
+            disabled={!sales || sales.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Invoice
+          </Button>
+        </div>
       }
     >
       {/* Search */}
