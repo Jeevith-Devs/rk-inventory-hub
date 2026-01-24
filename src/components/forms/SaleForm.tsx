@@ -171,12 +171,6 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
     const qty = Number(quantity);
     if (!product || !quantity || qty <= 0) return;
 
-    // Check stock availability
-    if ((product.current_stock || 0) < qty) {
-      alert(`Insufficient stock. Available: ${product.current_stock}`);
-      return;
-    }
-
     const unitPrice = product.selling_price || 0;
     const taxPercent = product.tax_percent || 0;
     const discountPercent = product.discount_percent || 0;
