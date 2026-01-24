@@ -89,7 +89,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
           <div className="flex-1 text-center sm:text-center print:text-center w-full sm:w-auto print:w-auto">
             <h2 className="text-xs sm:text-sm md:text-base print:text-sm font-bold">RK ENTERPRISES</h2>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">No.23/2,Part,GreenAcres,2ndLayout,Mathur,</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">Sriperumbidur Taluk,Kanchipruram Dist-602105</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">sriperumbudur taluk, kanchipuram dist-602105</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">rk.enterprises.tn.2025@gmail.com</p>
           </div>
           <div className="flex-1 text-center sm:text-right print:text-right space-y-0 w-full sm:w-auto print:w-auto">
@@ -112,8 +112,6 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
               <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold">To.</p>
               <p className="text-[9px] sm:text-[10px] print:text-[10px] mt-1 font-semibold break-words print:break-words">{buyer.company_name}</p>
               {buyer.billing_address && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{buyer.billing_address}</p>}
-              {buyer.city && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{buyer.city}, {buyer.state} {buyer.pincode}</p>}
-              {buyer.phone && <p className="text-[9px] sm:text-[10px] print:text-[10px]">Phone: {buyer.phone}</p>}
             </div>
 
             {/* Invoice Info */}
@@ -155,22 +153,22 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
             {/* Party Info */}
             <div className="p-2">
               <div className="grid grid-cols-2 gap-0 text-[9px] sm:text-[10px] print:text-[10px]">
-                <div>
+                <div className="border-b border-black pb-0.5">
                   <p className="font-bold">Vehicle No:</p>
                 </div>
-                <div className="text-right break-all print:break-all">
+                <div className="border-b border-black pb-0.5 text-right break-all print:break-all">
                   {sale.vehicle_no || '-'}
                 </div>
-                <div>
+                <div className="border-b border-black pb-0.5">
                   <p className="font-bold">Contact Person:</p>
                 </div>
-                <div className="text-right break-words print:break-words">
+                <div className="border-b border-black pb-0.5 text-right break-words print:break-words">
                   {buyer.contact_person ? `Mr ${buyer.contact_person}` : '-'}
                 </div>
-                <div>
+                <div className="border-b border-black pb-0.5">
                   <p className="font-bold">Contact Number:</p>
                 </div>
-                <div className="text-right">
+                <div className="border-b border-black pb-0.5 text-right">
                   {buyer.phone || '-'}
                 </div>
               </div>
