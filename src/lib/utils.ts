@@ -80,3 +80,14 @@ export function generateProductCode(sequenceNumber: number): string {
   const paddedNumber = String(sequenceNumber).padStart(3, '0');
   return `RK-PD-${paddedNumber}`;
 }
+
+/**
+ * Generates a quotation number in the format: QT\XXX\26-27
+ * @param sequenceNumber - The sequential number for the quotation
+ * @returns Quotation number string
+ */
+export function generateQuotationNumber(sequenceNumber: number): string {
+  const fy = getCurrentFinancialYear();
+  const paddedNumber = String(sequenceNumber).padStart(3, '0');
+  return `QT\\${paddedNumber}\\${fy}`;
+}

@@ -1,19 +1,24 @@
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  Truck, 
-  ShoppingCart, 
-  FileText, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Truck,
+  ShoppingCart,
+  FileText,
   Settings,
   LogOut,
   ChevronDown,
   Box,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  FileCheck,
+  Sun,
+  Moon,
+  IndianRupee
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   Sidebar,
   SidebarContent,
@@ -44,14 +49,18 @@ const masterItems = [
 const transactionItems = [
   { title: 'Stock In (Purchase)', url: '/purchases', icon: TrendingUp },
   { title: 'Stock Out (Sales)', url: '/sales', icon: TrendingDown },
+  { title: 'Quotations', url: '/quotations', icon: FileCheck },
+  { title: 'Purchase Orders', url: '/purchase-orders', icon: FileText },
 ];
 
 const reportItems = [
   { title: 'Reports', url: '/reports', icon: Box },
+  { title: 'Payment Status', url: '/mis-report', icon: IndianRupee },
 ];
 
 export function AppSidebar() {
   const { signOut, user, userRole } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const collapsed = state === 'collapsed';
@@ -191,6 +200,14 @@ export function AppSidebar() {
               <p className="text-xs text-sidebar-foreground/60 capitalize">{userRole || 'User'}</p>
             </div>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          >
+            {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon"

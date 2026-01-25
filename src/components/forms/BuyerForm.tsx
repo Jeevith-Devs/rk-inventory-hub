@@ -46,7 +46,7 @@ interface BuyerFormProps {
 
 export function BuyerForm({ buyer, onSubmit, isLoading, onCancel }: BuyerFormProps) {
   const { data: nextBuyerCode } = useNextBuyerCode();
-  
+
   const form = useForm<BuyerFormData>({
     resolver: zodResolver(buyerSchema),
     defaultValues: {
@@ -62,7 +62,7 @@ export function BuyerForm({ buyer, onSubmit, isLoading, onCancel }: BuyerFormPro
       email: buyer?.email || '',
       gst_no: buyer?.gst_no || '',
       payment_terms: buyer?.payment_terms || '',
-      credit_limit: buyer?.credit_limit ?? '',
+      credit_limit: buyer?.credit_limit ?? 0,
       is_active: buyer?.is_active ?? true,
     },
   });

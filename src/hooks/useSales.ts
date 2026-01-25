@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 
 export type PaymentMode = 'Cash' | 'UPI' | 'NEFT' | 'Credit' | 'Cheque';
 export type TransportMode = 'Road' | 'Courier' | 'Pickup' | 'Rail' | 'Air';
+export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid' | 'Overdue';
 
 export interface Sale {
   id: string;
@@ -26,6 +27,10 @@ export interface Sale {
   total_amount: number | null;
   round_off: number | null;
   grand_total: number | null;
+  payment_status: PaymentStatus | null;
+  paid_amount: number | null;
+  due_date: string | null;
+  payment_reference: string | null;
   notes: string | null;
   is_gst_invoice: boolean | null;
   created_by: string | null;
@@ -135,39 +140,11 @@ export const useCreateSale = () => {
   });
 };
 
-export const useDeleteSale = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      // Delete sale items first
-      await supabase.from('sale_items').delete().eq('sale_id', id);
-      // Then delete the sale
-      const { error } = await supabase.from('sales').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Sale deleted successfully' });
-    },
-    onError: (error: Error) => {
-      toast({ title: 'Error deleting sale', description: error.message, variant: 'destructive' });
-    },
-  });
-};
-
-interface UpdateSaleInput {
-  saleId: string;
-  sale: Omit<Sale, 'id' | 'created_at' | 'updated_at'>;
-  items: Omit<SaleItem, 'id' | 'sale_id' | 'created_at'>[];
-}
-
 export const useUpdateSale = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ saleId, sale, items }: UpdateSaleInput) => {
+    mutationFn: async ({ saleId, sale, items }: { saleId: string; sale: any, items: any[] }) => {
       // Update sale
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
@@ -202,6 +179,53 @@ export const useUpdateSale = () => {
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating sale', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useUpdateSalePayment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, paid_amount, payment_status, payment_reference }: { id: string; paid_amount: number; payment_status: any; payment_reference?: string | null }) => {
+      const { data, error } = await supabase
+        .from('sales')
+        .update({ paid_amount, payment_status, payment_reference })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      toast({ title: 'Payment updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating payment', description: error.message, variant: 'destructive' });
+    },
+  });
+};
+
+export const useDeleteSale = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Delete sale items first
+      await supabase.from('sale_items').delete().eq('sale_id', id);
+      // Then delete the sale
+      const { error } = await supabase.from('sales').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Sale deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting sale', description: error.message, variant: 'destructive' });
     },
   });
 };

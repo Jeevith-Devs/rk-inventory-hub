@@ -14,8 +14,15 @@ import Buyers from "@/pages/Buyers";
 import Products from "@/pages/Products";
 import Purchases from "@/pages/Purchases";
 import Sales from "@/pages/Sales";
+import Quotations from "@/pages/Quotations";
+import { QuotationFormPage } from "@/pages/NewQuotation";
+import { QuotationView } from "@/pages/QuotationView";
+import PurchaseOrders from "@/pages/PurchaseOrders";
+import PurchaseOrderFormPage from "@/pages/NewPurchaseOrder";
+import PurchaseOrderView from "@/pages/PurchaseOrderView";
 import { Invoice } from "@/pages/Invoice";
 import Reports from "@/pages/Reports";
+import MISReport from "@/pages/MISReport";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 
@@ -68,7 +75,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Introduction />} />
               <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-              
+
               <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/suppliers" element={<Suppliers />} />
@@ -76,11 +83,24 @@ const App = () => (
                 <Route path="/products" element={<Products />} />
                 <Route path="/purchases" element={<Purchases />} />
                 <Route path="/sales" element={<Sales />} />
+                <Route path="/quotations" element={<Quotations />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/mis-report" element={<MISReport />} />
                 <Route path="/settings" element={<Settings />} />
+
+                {/* Purchase Orders Routes */}
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/purchase-orders/new" element={<PurchaseOrderFormPage />} />
+                <Route path="/purchase-orders/edit/:id" element={<PurchaseOrderFormPage />} />
               </Route>
 
               <Route path="/invoice/:id" element={<ProtectedRoute><Invoice /></ProtectedRoute>} />
+              <Route path="/quotations/new" element={<ProtectedRoute><QuotationFormPage /></ProtectedRoute>} />
+              <Route path="/quotations/edit/:id" element={<ProtectedRoute><QuotationFormPage /></ProtectedRoute>} />
+              <Route path="/quotations/:id" element={<ProtectedRoute><QuotationView /></ProtectedRoute>} />
+
+              <Route path="/purchase-orders/:id" element={<ProtectedRoute><PurchaseOrderView /></ProtectedRoute>} />
+
 
               <Route path="*" element={<NotFound />} />
             </Routes>

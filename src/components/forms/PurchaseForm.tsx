@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,12 +28,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreatePurchase } from '@/hooks/usePurchases';
+import { useCreatePurchase, useUpdatePurchase, PurchaseWithItems } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
 import { useNextPurchaseNumber } from '@/hooks/useInvoiceSequence';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Upload, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const purchaseSchema = z.object({
   supplier_id: z.string().min(1, 'Supplier is required'),
@@ -58,19 +60,26 @@ interface PurchaseItem {
 }
 
 interface PurchaseFormProps {
+  initialData?: PurchaseWithItems | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
+export function PurchaseForm({ initialData, onSuccess, onCancel }: PurchaseFormProps) {
   const { data: suppliers } = useSuppliers();
   const { data: products } = useProducts();
   const createPurchase = useCreatePurchase();
+  const updatePurchase = useUpdatePurchase();
   const { data: purchaseNumber } = useNextPurchaseNumber();
+  const { toast } = useToast();
 
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingDriveLink, setExistingDriveLink] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
@@ -82,6 +91,37 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
       notes: '',
     },
   });
+
+  // Load initial data for editing
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        supplier_id: initialData.supplier_id,
+        purchase_date: initialData.purchase_date,
+        invoice_number: initialData.invoice_number || '',
+        invoice_date: initialData.invoice_date || '',
+        notes: initialData.notes || '',
+      });
+
+      if (initialData.purchase_items) {
+        setItems(initialData.purchase_items.map(item => ({
+          product_id: item.product_id,
+          product_name: item.products?.name || 'Unknown Product',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_percent: item.tax_percent || 0,
+          discount_percent: item.discount_percent || 0,
+          tax_amount: item.tax_amount || 0,
+          discount_amount: item.discount_amount || 0,
+          total_amount: item.total_amount,
+        })));
+      }
+
+      if (initialData.bill_image_url) {
+        setExistingDriveLink(initialData.bill_image_url);
+      }
+    }
+  }, [initialData, form]);
 
   const addItem = () => {
     const product = products?.find((p) => p.id === selectedProduct);
@@ -119,6 +159,39 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setExistingDriveLink(null); // Clear existing link if new file is selected
+    }
+  };
+
+  const uploadFileToDrive = async (file: File): Promise<string | null> => {
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', `${initialData?.purchase_number || purchaseNumber}_${file.name}`);
+
+      const { data, error } = await supabase.functions.invoke('upload-to-drive', {
+        body: formData,
+      });
+
+      if (error) throw error;
+      return data.webViewLink;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'Could not upload invoice to Google Drive.',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const totals = items.reduce(
     (acc, item) => ({
       subtotal: acc.subtotal + item.quantity * item.unit_price,
@@ -129,42 +202,58 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
     { subtotal: 0, discount: 0, tax: 0, total: 0 }
   );
 
-  const handleSubmit = (data: PurchaseFormData) => {
+  const handleSubmit = async (data: PurchaseFormData) => {
     if (items.length === 0) return;
-    if (!purchaseNumber) {
+
+    const pNumber = initialData?.purchase_number || purchaseNumber;
+    if (!pNumber) {
       alert('Generating purchase number, please wait...');
       return;
     }
 
-    createPurchase.mutate(
-      {
-        purchase: {
-          purchase_number: purchaseNumber,
-          supplier_id: data.supplier_id,
-          purchase_date: data.purchase_date,
-          invoice_number: data.invoice_number || null,
-          invoice_date: data.invoice_date || null,
-          subtotal: totals.subtotal,
-          discount_amount: totals.discount,
-          tax_amount: totals.tax,
-          total_amount: totals.total,
-          notes: data.notes || null,
-          bill_image_url: null,
-          created_by: null,
-        },
-        items: items.map((item) => ({
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          tax_percent: item.tax_percent,
-          discount_percent: item.discount_percent,
-          tax_amount: item.tax_amount,
-          discount_amount: item.discount_amount,
-          total_amount: item.total_amount,
-        })),
-      },
-      { onSuccess }
-    );
+    let driveLink = existingDriveLink;
+    if (selectedFile) {
+      driveLink = await uploadFileToDrive(selectedFile);
+      if (!driveLink) return;
+    }
+
+    const purchasePayload = {
+      purchase_number: pNumber,
+      supplier_id: data.supplier_id,
+      purchase_date: data.purchase_date,
+      invoice_number: data.invoice_number || null,
+      invoice_date: data.invoice_date || null,
+      subtotal: totals.subtotal,
+      discount_amount: totals.discount,
+      tax_amount: totals.tax,
+      total_amount: totals.total,
+      notes: data.notes || null,
+      bill_image_url: driveLink,
+      created_by: initialData?.created_by || null,
+    };
+
+    const itemsPayload = items.map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      tax_percent: item.tax_percent,
+      discount_percent: item.discount_percent,
+      tax_amount: item.tax_amount,
+      discount_amount: item.discount_amount,
+      total_amount: item.total_amount,
+    }));
+
+    if (initialData) {
+      updatePurchase.mutate(
+        { id: initialData.id, purchase: purchasePayload, items: itemsPayload },
+        { onSuccess }
+      );
+    } else {
+      createPurchase.mutate(
+        { purchase: purchasePayload, items: itemsPayload },
+        { onSuccess }
+      );
+    }
   };
 
   return (
@@ -178,7 +267,7 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Supplier *</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select supplier" />
@@ -234,6 +323,68 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
                 </FormControl>
               </FormItem>
             )}
+          />
+        </div>
+
+        {/* Invoice Upload Section */}
+        <div className="border-2 border-dashed rounded-lg p-4 bg-muted/20 flex flex-col items-center justify-center gap-2">
+          {!selectedFile && !existingDriveLink ? (
+            <>
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <Upload className="h-5 w-5" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Upload Supplier Invoice</p>
+                <p className="text-xs text-muted-foreground">PDF, JPG, or PNG to Google Drive</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose File
+              </Button>
+            </>
+          ) : selectedFile ? (
+            <div className="flex items-center gap-3 w-full max-w-sm p-2 bg-background border rounded-md">
+              <FileText className="h-8 w-8 text-primary" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedFile(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 w-full max-w-sm p-2 bg-background border rounded-md">
+              <FileText className="h-8 w-8 text-green-600" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate italic text-muted-foreground">Invoice Uploaded to Google Drive</p>
+                <a href={existingDriveLink!} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">View on Drive</a>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setExistingDriveLink(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+            accept="image/*,.pdf"
           />
         </div>
 
@@ -358,9 +509,9 @@ export function PurchaseForm({ onSuccess, onCancel }: PurchaseFormProps) {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={items.length === 0 || createPurchase.isPending}>
-            {createPurchase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Purchase
+          <Button type="submit" disabled={items.length === 0 || createPurchase.isPending || updatePurchase.isPending || isUploading}>
+            {(createPurchase.isPending || updatePurchase.isPending || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isUploading ? 'Uploading to Drive...' : initialData ? 'Update Purchase' : 'Save Purchase'}
           </Button>
         </div>
       </form>

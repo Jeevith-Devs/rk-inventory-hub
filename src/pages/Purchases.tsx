@@ -26,11 +26,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { usePurchases, useDeletePurchase } from '@/hooks/usePurchases';
+import { usePurchases, useDeletePurchase, usePurchase, PurchaseWithItems } from '@/hooks/usePurchases';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { PurchaseForm } from '@/components/forms/PurchaseForm';
 import { format } from 'date-fns';
-import { Plus, Search, Loader2, Eye, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Loader2, Eye, Trash2, Download, Pencil, ExternalLink } from 'lucide-react';
 import { exportPurchasesToExcel } from '@/lib/excelExport';
 
 export default function Purchases() {
@@ -39,8 +39,12 @@ export default function Purchases() {
   const deletePurchase = useDeletePurchase();
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<string | null>(null);
   const [deletingPurchase, setDeletingPurchase] = useState<{ id: string; purchase_number: string } | null>(null);
+
+  // Fetch full purchase data when editing
+  const { data: fullPurchaseToEdit, isLoading: isLoadingFullPurchase } = usePurchase(editingPurchaseId || '');
 
   const filteredPurchases = purchases?.filter(
     (purchase) =>
@@ -54,6 +58,12 @@ export default function Purchases() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+    setEditingPurchaseId(null);
+  };
+
+  const handleEdit = (id: string) => {
+    setEditingPurchaseId(id);
+    setIsFormOpen(true);
   };
 
   const handleDelete = () => {
@@ -131,23 +141,46 @@ export default function Purchases() {
                   <TableCell className="font-mono text-sm">{purchase.purchase_number}</TableCell>
                   <TableCell>{format(new Date(purchase.purchase_date), 'dd/MM/yyyy')}</TableCell>
                   <TableCell className="font-medium">{getSupplierName(purchase.supplier_id)}</TableCell>
-                  <TableCell>{purchase.invoice_number || '-'}</TableCell>
+                  <TableCell className="flex items-center gap-2">
+                    {purchase.invoice_number || '-'}
+                    {purchase.bill_image_url && (
+                      <a
+                        href={purchase.bill_image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View Invoice on Google Drive"
+                        className="text-primary hover:text-primary/80"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">₹{purchase.subtotal?.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{purchase.tax_amount?.toLocaleString()}</TableCell>
                   <TableCell className="text-right font-medium">₹{purchase.total_amount?.toLocaleString()}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setViewingPurchase(purchase.id)}
+                        className="h-8 w-8"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => handleEdit(purchase.id)}
+                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setDeletingPurchase({ id: purchase.id, purchase_number: purchase.purchase_number })}
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -164,9 +197,19 @@ export default function Purchases() {
       <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Purchase Entry</DialogTitle>
+            <DialogTitle>{editingPurchaseId ? `Edit Purchase: ${fullPurchaseToEdit?.purchase_number || ''}` : 'New Purchase Entry'}</DialogTitle>
           </DialogHeader>
-          <PurchaseForm onSuccess={handleCloseForm} onCancel={handleCloseForm} />
+          {editingPurchaseId && isLoadingFullPurchase ? (
+            <div className="py-12 flex justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <PurchaseForm
+              initialData={fullPurchaseToEdit}
+              onSuccess={handleCloseForm}
+              onCancel={handleCloseForm}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -233,7 +276,19 @@ function PurchaseDetails({ purchaseId }: { purchaseId: string }) {
         </div>
         <div>
           <p className="text-sm text-muted-foreground">Invoice Number</p>
-          <p className="font-medium">{purchase.invoice_number || '-'}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{purchase.invoice_number || '-'}</p>
+            {purchase.bill_image_url && (
+              <a
+                href={purchase.bill_image_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary flex items-center gap-1 hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> View Google Drive
+              </a>
+            )}
+          </div>
         </div>
       </div>
       <div className="border-t pt-4">

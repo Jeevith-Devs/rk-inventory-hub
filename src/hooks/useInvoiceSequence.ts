@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { generateInvoiceNumber, generatePurchaseNumber, generateSupplierCode, generateBuyerCode, generateProductCode } from '@/lib/utils';
+import { generateInvoiceNumber, generatePurchaseNumber, generateSupplierCode, generateBuyerCode, generateProductCode, generateQuotationNumber } from '@/lib/utils';
 
 /**
  * Hook to get the next invoice number
@@ -206,3 +206,41 @@ export const useNextProductCode = () => {
     staleTime: 0, // Always refetch to get fresh count
   });
 };
+
+/**
+ * Hook to get the next quotation number
+ */
+export const useNextQuotationNumber = () => {
+  return useQuery({
+    queryKey: ['nextQuotationNumber'],
+    queryFn: async () => {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth() + 1;
+
+      let fyStartYear = currentYear;
+      if (currentMonth < 4) {
+        fyStartYear = currentYear - 1;
+      }
+
+      const fyStart = new Date(fyStartYear, 3, 1);
+      const fyEnd = new Date(fyStartYear + 1, 2, 31);
+
+      const { data, error, count } = await supabase
+        .from('quotations')
+        .select('id', { count: 'exact' })
+        .gte('created_at', fyStart.toISOString())
+        .lte('created_at', fyEnd.toISOString());
+
+      if (error) {
+        console.error('Error fetching quotation count:', error);
+        return `QT-${Date.now().toString().slice(-8)}`;
+      }
+
+      const sequenceNumber = (count || 0) + 1;
+      return generateQuotationNumber(sequenceNumber);
+    },
+    staleTime: 0,
+  });
+};
+
