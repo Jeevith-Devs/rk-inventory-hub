@@ -17,6 +17,8 @@ export interface Product {
   selling_price: number | null;
   discount_percent: number | null;
   tax_percent: number | null;
+  cgst_percent: number | null;
+  sgst_percent: number | null;
   current_stock: number | null;
   reorder_level: number | null;
   default_supplier_id: string | null;

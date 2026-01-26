@@ -21,14 +21,14 @@ export function AppHeader({ title }: AppHeaderProps) {
   const lowStockCount = lowStockProducts?.length || 0;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-6">
       <SidebarTrigger className="md:hidden">
         <Menu className="h-5 w-5" />
       </SidebarTrigger>
 
-      <div className="flex items-center gap-3 flex-1">
-        <img src="/rk-logo.svg" alt="RK Enterprises" style={{ height: '40px', objectFit: 'contain' }} />
-        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 overflow-hidden">
+        <img src="/rk-logo.svg" alt="RK Enterprises" style={{ height: '32px', minWidth: '32px', objectFit: 'contain' }} className="sm:h-10" />
+        <h1 className="text-base sm:text-xl font-semibold text-foreground truncate">{title}</h1>
       </div>
 
       <div className="flex items-center gap-2">
@@ -38,8 +38,8 @@ export function AppHeader({ title }: AppHeaderProps) {
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               {lowStockCount > 0 && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                 >
                   {lowStockCount}

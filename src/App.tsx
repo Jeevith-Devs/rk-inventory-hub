@@ -24,6 +24,8 @@ import { Invoice } from "@/pages/Invoice";
 import Reports from "@/pages/Reports";
 import MISReport from "@/pages/MISReport";
 import Settings from "@/pages/Settings";
+import StockInFormPage from "@/pages/StockInFormPage";
+import StockOutFormPage from "@/pages/StockOutFormPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,7 +84,12 @@ const App = () => (
                 <Route path="/customers" element={<Buyers />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/purchases" element={<Purchases />} />
+                <Route path="/purchases/new" element={<StockInFormPage />} />
+                <Route path="/purchases/edit/:id" element={<StockInFormPage />} />
+
                 <Route path="/sales" element={<Sales />} />
+                <Route path="/sales/new" element={<StockOutFormPage />} />
+                <Route path="/sales/edit/:id" element={<StockOutFormPage />} />
                 <Route path="/quotations" element={<Quotations />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/mis-report" element={<MISReport />} />
@@ -92,11 +99,12 @@ const App = () => (
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
                 <Route path="/purchase-orders/new" element={<PurchaseOrderFormPage />} />
                 <Route path="/purchase-orders/edit/:id" element={<PurchaseOrderFormPage />} />
+
+                <Route path="/quotations/new" element={<QuotationFormPage />} />
+                <Route path="/quotations/edit/:id" element={<QuotationFormPage />} />
               </Route>
 
               <Route path="/invoice/:id" element={<ProtectedRoute><Invoice /></ProtectedRoute>} />
-              <Route path="/quotations/new" element={<ProtectedRoute><QuotationFormPage /></ProtectedRoute>} />
-              <Route path="/quotations/edit/:id" element={<ProtectedRoute><QuotationFormPage /></ProtectedRoute>} />
               <Route path="/quotations/:id" element={<ProtectedRoute><QuotationView /></ProtectedRoute>} />
 
               <Route path="/purchase-orders/:id" element={<ProtectedRoute><PurchaseOrderView /></ProtectedRoute>} />

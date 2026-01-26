@@ -153,6 +153,8 @@ CREATE TABLE public.products (
     selling_price NUMERIC(12,2) DEFAULT 0,
     discount_percent NUMERIC(5,2) DEFAULT 0,
     tax_percent NUMERIC(5,2) DEFAULT 18,
+    cgst_percent NUMERIC(5,2) DEFAULT 9,
+    sgst_percent NUMERIC(5,2) DEFAULT 9,
     current_stock NUMERIC(12,2) DEFAULT 0,
     reorder_level NUMERIC(12,2) DEFAULT 10,
     default_supplier_id UUID REFERENCES public.suppliers(id),

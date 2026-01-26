@@ -41,8 +41,6 @@ export default function Sales() {
   const deleteSale = useDeleteSale();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingSale, setEditingSale] = useState<string | null>(null);
   const [viewingSale, setViewingSale] = useState<string | null>(null);
   const [deletingSale, setDeletingSale] = useState<{ id: string; invoice_number: string } | null>(null);
 
@@ -52,11 +50,6 @@ export default function Sales() {
 
   const getBuyerName = (buyerId: string) => {
     return buyers?.find((b) => b.id === buyerId)?.company_name || '-';
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setEditingSale(null);
   };
 
   const handleDelete = () => {
@@ -80,7 +73,7 @@ export default function Sales() {
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => navigate('/sales/new')}>
             <Plus className="mr-2 h-4 w-4" />
             New Invoice
           </Button>
@@ -155,10 +148,7 @@ export default function Sales() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                          setEditingSale(sale.id);
-                          setIsFormOpen(true);
-                        }}
+                        onClick={() => navigate(`/sales/edit/${sale.id}`)}
                         title="Edit Sale"
                       >
                         <Pencil className="h-4 w-4" />
@@ -187,20 +177,6 @@ export default function Sales() {
           </TableBody>
         </Table>
       </div>
-
-      {/* Sale Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Sales Invoice</DialogTitle>
-          </DialogHeader>
-          <SaleForm
-            saleId={editingSale || undefined}
-            onSuccess={handleCloseForm}
-            onCancel={handleCloseForm}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* View Sale Details Dialog */}
       <Dialog open={!!viewingSale} onOpenChange={() => setViewingSale(null)}>

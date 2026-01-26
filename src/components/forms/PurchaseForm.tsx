@@ -21,6 +21,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { SupplierForm } from '@/components/forms/SupplierForm';
+import { ProductForm } from '@/components/forms/ProductForm';
+import { useCreateSupplier } from '@/hooks/useSuppliers';
+import { useCreateProduct } from '@/hooks/useProducts';
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,7 +43,7 @@ import { useCreatePurchase, useUpdatePurchase, PurchaseWithItems } from '@/hooks
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useProducts } from '@/hooks/useProducts';
 import { useNextPurchaseNumber } from '@/hooks/useInvoiceSequence';
-import { Loader2, Plus, Trash2, Upload, FileText, X } from 'lucide-react';
+import { Loader2, Plus, Trash2, Upload, FileText, X, UserPlus, PackagePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -80,6 +91,11 @@ export function PurchaseForm({ initialData, onSuccess, onCancel }: PurchaseFormP
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [existingDriveLink, setExistingDriveLink] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showNewSupplierDialog, setShowNewSupplierDialog] = useState(false);
+  const [showNewProductDialog, setShowNewProductDialog] = useState(false);
+  const createSupplier = useCreateSupplier();
+  const createProduct = useCreateProduct();
 
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
@@ -266,7 +282,32 @@ export function PurchaseForm({ initialData, onSuccess, onCancel }: PurchaseFormP
             name="supplier_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Supplier *</FormLabel>
+                <div className="flex justify-between items-center mb-1">
+                  <FormLabel>Supplier *</FormLabel>
+                  <Dialog open={showNewSupplierDialog} onOpenChange={setShowNewSupplierDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-primary text-xs flex items-center gap-1">
+                        <UserPlus size={12} />
+                        New
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Add New Supplier</DialogTitle>
+                      </DialogHeader>
+                      <SupplierForm
+                        onSubmit={(data) => createSupplier.mutate(data, {
+                          onSuccess: (newSupplier) => {
+                            form.setValue('supplier_id', newSupplier.id);
+                            setShowNewSupplierDialog(false);
+                          }
+                        })}
+                        onCancel={() => setShowNewSupplierDialog(false)}
+                        isLoading={createSupplier.isPending}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -393,7 +434,32 @@ export function PurchaseForm({ initialData, onSuccess, onCancel }: PurchaseFormP
           <h3 className="font-medium">Add Items</h3>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="text-sm font-medium">Product</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium">Product</label>
+                <Dialog open={showNewProductDialog} onOpenChange={setShowNewProductDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-primary text-xs flex items-center gap-1">
+                      <PackagePlus size={12} />
+                      Add New
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Product</DialogTitle>
+                    </DialogHeader>
+                    <ProductForm
+                      onSubmit={(data) => createProduct.mutate(data, {
+                        onSuccess: (newProduct) => {
+                          setSelectedProduct(newProduct.id);
+                          setShowNewProductDialog(false);
+                        }
+                      })}
+                      onCancel={() => setShowNewProductDialog(false)}
+                      isLoading={createProduct.isPending}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
               <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select product" />

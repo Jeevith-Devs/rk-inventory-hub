@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCreateQuotation, useQuotation, useUpdateQuotation } from '@/hooks/useQuotations';
 import { useBuyers } from '@/hooks/useBuyers';
@@ -11,8 +11,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Plus, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, UserPlus, PackagePlus } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
+} from '@/components/ui/dialog';
+import { BuyerForm } from '@/components/forms/BuyerForm';
+import { ProductForm } from '@/components/forms/ProductForm';
+import { useCreateBuyer } from '@/hooks/useBuyers';
+import { useCreateProduct } from '@/hooks/useProducts';
 import { format, addDays } from 'date-fns';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface QuotationItem {
     product_id: string;
@@ -35,7 +48,7 @@ export function QuotationFormPage() {
     const { data: buyers } = useBuyers();
     const { data: products } = useProducts();
     const { data: quotationNumber } = useNextQuotationNumber();
-    const { data: existingQuotation } = useQuotation(id || '');
+    const { data: existingQuotation, isLoading: isLoadingQuotation } = useQuotation(id || '');
     const createQuotation = useCreateQuotation();
     const updateQuotation = useUpdateQuotation();
 
@@ -45,10 +58,47 @@ export function QuotationFormPage() {
     const [referenceNo, setReferenceNo] = useState('');
     const [isGst, setIsGst] = useState(true);
     const [notes, setNotes] = useState('');
-    const [termsConditions, setTermsConditions] = useState('');
+    const [termsConditions, setTermsConditions] = useState(`1. Validity: 30 days from the date of quotation.
+2. Delivery: Within 3-7 days after receipt of confirmed PO.
+3. Payment: Within 30 days from date of invoice.
+4. GST: Extra as applicable at the time of supply.
+5. F.O.R: Destination / Ex-works as agreed.`);
     const [items, setItems] = useState<QuotationItem[]>([]);
     const [selectedProduct, setSelectedProduct] = useState('');
     const [quantity, setQuantity] = useState('');
+
+    const [showNewBuyerDialog, setShowNewBuyerDialog] = useState(false);
+    const [showNewProductDialog, setShowNewProductDialog] = useState(false);
+
+    const createBuyer = useCreateBuyer();
+    const createProduct = useCreateProduct();
+
+    useEffect(() => {
+        if (isEditMode && existingQuotation) {
+            setBuyerId(existingQuotation.buyer_id);
+            setQuotationDate(existingQuotation.quotation_date);
+            setValidUntil(existingQuotation.valid_until);
+            setReferenceNo(existingQuotation.reference_no || '');
+            setIsGst(existingQuotation.is_gst_quotation ?? true);
+            setNotes(existingQuotation.notes || '');
+            setTermsConditions(existingQuotation.terms_conditions || '');
+
+            if (existingQuotation.quotation_items) {
+                const mappedItems = existingQuotation.quotation_items.map((item: any) => ({
+                    product_id: item.product_id,
+                    product_name: item.products?.name || 'Unknown Product',
+                    quantity: Number(item.quantity),
+                    unit_price: Number(item.unit_price),
+                    tax_percent: Number(item.tax_percent || 0),
+                    discount_percent: Number(item.discount_percent || 0),
+                    tax_amount: Number(item.tax_amount || 0),
+                    discount_amount: Number(item.discount_amount || 0),
+                    total_amount: Number(item.total_amount || 0),
+                }));
+                setItems(mappedItems);
+            }
+        }
+    }, [isEditMode, existingQuotation]);
 
     const addItem = () => {
         const product = products?.find((p) => p.id === selectedProduct);
@@ -151,128 +201,186 @@ export function QuotationFormPage() {
         }
     };
 
+    if (isEditMode && isLoadingQuotation) {
+        return (
+            <PageContainer title="Edit Quotation">
+                <div className="flex h-[400px] items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </PageContainer>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            {/* Header */}
-            <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b p-3 sm:p-4 flex flex-wrap gap-2">
-                <Button
-                    variant="outline"
-                    onClick={() => navigate('/quotations')}
-                    className="flex items-center gap-2"
-                >
-                    <ArrowLeft size={16} />
-                    Back to Quotations
+        <PageContainer
+            title={isEditMode ? `Edit Quotation: ${existingQuotation?.quotation_number}` : 'Generate New Quotation'}
+            actions={
+                <Button variant="outline" size="sm" onClick={() => navigate('/quotations')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to List
                 </Button>
-            </div>
-
-            {/* Form */}
-            <div className="p-4 sm:p-6 md:p-8">
-                <div className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-6">
-                    <h1 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit' : 'Create New'} Quotation</h1>
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Basic Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
+            }
+        >
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <Card>
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-sm font-medium">Customer & Period</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div>
+                            <div className="flex justify-between items-center mb-1">
                                 <label className="text-sm font-medium">Customer *</label>
-                                <Select value={buyerId} onValueChange={setBuyerId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select customer" />
+                                <Dialog open={showNewBuyerDialog} onOpenChange={setShowNewBuyerDialog}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-6 px-2 text-primary text-xs flex items-center gap-1">
+                                            <UserPlus size={12} />
+                                            New
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                            <DialogTitle>Add New Customer</DialogTitle>
+                                        </DialogHeader>
+                                        <BuyerForm
+                                            onSubmit={(data) => createBuyer.mutate(data, {
+                                                onSuccess: (newBuyer) => {
+                                                    setBuyerId(newBuyer.id);
+                                                    setShowNewBuyerDialog(false);
+                                                }
+                                            })}
+                                            onCancel={() => setShowNewBuyerDialog(false)}
+                                            isLoading={createBuyer.isPending}
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                            <Select value={buyerId} onValueChange={setBuyerId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select customer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {buyers?.filter((b) => b.is_active).map((buyer) => (
+                                        <SelectItem key={buyer.id} value={buyer.id}>
+                                            {buyer.company_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1 block pt-[26px]">Quotation Date *</label>
+                            <Input type="date" value={quotationDate} onChange={(e) => setQuotationDate(e.target.value)} />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1 block pt-[26px]">Valid Until *</label>
+                            <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium mb-1 block pt-[26px]">Reference No</label>
+                            <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="e.g. Inquiry #123" />
+                        </div>
+                    </CardContent>
+                    <CardContent className="pt-0">
+                        <div className="flex items-center gap-2">
+                            <Switch checked={isGst} onCheckedChange={setIsGst} />
+                            <label className="text-xs font-semibold uppercase tracking-widest text-primary">GST Quotation</label>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between py-4">
+                        <CardTitle className="text-sm font-medium">Line Items</CardTitle>
+                        <div className="flex gap-2">
+                            <Dialog open={showNewProductDialog} onOpenChange={setShowNewProductDialog}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-8 text-xs">
+                                        <PackagePlus className="mr-2 h-3 w-3" />
+                                        New Product
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Product</DialogTitle>
+                                    </DialogHeader>
+                                    <ProductForm
+                                        onSubmit={(data) => createProduct.mutate(data, {
+                                            onSuccess: (newProduct) => {
+                                                setSelectedProduct(newProduct.id);
+                                                setShowNewProductDialog(false);
+                                            }
+                                        })}
+                                        onCancel={() => setShowNewProductDialog(false)}
+                                        isLoading={createProduct.isPending}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex gap-4 items-end flex-wrap p-4 bg-muted/30 rounded-lg border border-dashed">
+                            <div className="flex-1 min-w-[300px]">
+                                <label className="text-xs font-semibold mb-1 block uppercase tracking-wider text-muted-foreground">Select Product</label>
+                                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                                    <SelectTrigger className="bg-background">
+                                        <SelectValue placeholder="Search item to quote..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {buyers?.filter((b) => b.is_active).map((buyer) => (
-                                            <SelectItem key={buyer.id} value={buyer.id}>
-                                                {buyer.company_name}
+                                        {products?.filter((p) => p.status === 'active').map((product) => (
+                                            <SelectItem key={product.id} value={product.id}>
+                                                {product.name} - ₹{product.selling_price}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Quotation Date *</label>
-                                <Input type="date" value={quotationDate} onChange={(e) => setQuotationDate(e.target.value)} />
+                            <div className="w-32">
+                                <label className="text-xs font-semibold mb-1 block uppercase tracking-wider text-muted-foreground">Quantity</label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    value={quantity}
+                                    className="bg-background"
+                                    onChange={(e) => setQuantity(e.target.value)}
+                                />
                             </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Valid Until *</label>
-                                <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Reference No</label>
-                                <Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} />
-                            </div>
+                            <Button type="button" onClick={addItem} disabled={!selectedProduct || !quantity} className="h-10 px-6">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add
+                            </Button>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <Switch checked={isGst} onCheckedChange={setIsGst} />
-                            <label className="text-sm font-medium">GST Quotation</label>
-                        </div>
-
-                        {/* Add Item */}
-                        <div className="border rounded-lg p-4 space-y-4">
-                            <h3 className="font-medium">Add Items</h3>
-                            <div className="flex gap-4 items-end">
-                                <div className="flex-1">
-                                    <label className="text-sm font-medium">Product</label>
-                                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select product" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {products?.filter((p) => p.status === 'active').map((product) => (
-                                                <SelectItem key={product.id} value={product.id}>
-                                                    {product.name} - ₹{product.selling_price}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="w-32">
-                                    <label className="text-sm font-medium">Quantity</label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(e.target.value)}
-                                    />
-                                </div>
-                                <Button type="button" onClick={addItem} disabled={!selectedProduct}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Items Table */}
-                        {items.length > 0 && (
-                            <div className="rounded-md border">
+                        {items.length > 0 ? (
+                            <div className="rounded-md border overflow-hidden">
                                 <Table>
-                                    <TableHeader>
+                                    <TableHeader className="bg-muted/50">
                                         <TableRow>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead className="text-right">Qty</TableHead>
-                                            <TableHead className="text-right">Unit Price</TableHead>
-                                            <TableHead className="text-right">Tax %</TableHead>
-                                            <TableHead className="text-right">Total</TableHead>
-                                            <TableHead></TableHead>
+                                            <TableHead className="py-3">Description</TableHead>
+                                            <TableHead className="text-right py-3">Qty</TableHead>
+                                            <TableHead className="text-right py-3">Rate</TableHead>
+                                            <TableHead className="text-right py-3">Tax %</TableHead>
+                                            <TableHead className="text-right py-3 font-semibold">Total</TableHead>
+                                            <TableHead className="w-[50px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {items.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{item.product_name}</TableCell>
+                                            <TableRow key={index} className="hover:bg-muted/20">
+                                                <TableCell className="font-medium">{item.product_name}</TableCell>
                                                 <TableCell className="text-right">{item.quantity}</TableCell>
-                                                <TableCell className="text-right">₹{item.unit_price}</TableCell>
-                                                <TableCell className="text-right">{item.tax_percent}%</TableCell>
-                                                <TableCell className="text-right">₹{item.total_amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">₹{item.unit_price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-muted-foreground">{item.tax_percent}%</TableCell>
+                                                <TableCell className="text-right font-bold text-primary">₹{item.total_amount.toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => removeItem(index)}
+                                                        className="text-destructive h-8 w-8 hover:bg-destructive/10"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -282,75 +390,96 @@ export function QuotationFormPage() {
                                     </TableBody>
                                 </Table>
                             </div>
+                        ) : (
+                            <div className="py-10 text-center border-2 border-dashed rounded-lg text-muted-foreground">
+                                No items added. Choose a product above to build your quotation.
+                            </div>
                         )}
 
-                        {/* Totals */}
                         {items.length > 0 && (
-                            <div className="flex justify-end">
-                                <div className="w-64 space-y-2">
-                                    <div className="flex justify-between">
-                                        <span>Subtotal:</span>
-                                        <span>₹{totals.subtotal.toFixed(2)}</span>
+                            <div className="flex justify-end pt-4 border-t">
+                                <div className="w-full sm:w-80 space-y-3 p-4 bg-muted/20 rounded-lg">
+                                    <div className="flex justify-between text-sm text-muted-foreground">
+                                        <span>Subtotal</span>
+                                        <span className="font-medium text-foreground">₹{totals.subtotal.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Discount:</span>
-                                        <span>-₹{totals.discount.toFixed(2)}</span>
+                                    <div className="flex justify-between text-sm text-muted-foreground">
+                                        <span>Discount</span>
+                                        <span className="font-medium text-destructive">-₹{totals.discount.toFixed(2)}</span>
                                     </div>
                                     {isGst ? (
                                         <>
-                                            <div className="flex justify-between">
-                                                <span>CGST:</span>
-                                                <span>₹{(totals.tax / 2).toFixed(2)}</span>
+                                            <div className="flex justify-between text-sm text-muted-foreground">
+                                                <span>Estimated CGST</span>
+                                                <span className="font-medium text-foreground">₹{(totals.tax / 2).toFixed(2)}</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>SGST:</span>
-                                                <span>₹{(totals.tax / 2).toFixed(2)}</span>
+                                            <div className="flex justify-between text-sm text-muted-foreground">
+                                                <span>Estimated SGST</span>
+                                                <span className="font-medium text-foreground">₹{(totals.tax / 2).toFixed(2)}</span>
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="flex justify-between">
-                                            <span>IGST:</span>
-                                            <span>₹{totals.tax.toFixed(2)}</span>
+                                        <div className="flex justify-between text-sm text-muted-foreground">
+                                            <span>Estimated IGST</span>
+                                            <span className="font-medium text-foreground">₹{totals.tax.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between font-bold border-t pt-2">
-                                        <span>Grand Total:</span>
+                                    <div className="flex justify-between font-bold text-xl pt-2 border-t border-muted text-primary">
+                                        <span>Quotation Total</span>
                                         <span>₹{totals.total.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
                         )}
+                    </CardContent>
+                </Card>
 
-                        {/* Notes and Terms */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium">Notes</label>
-                                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium">Terms & Conditions</label>
-                                <Textarea value={termsConditions} onChange={(e) => setTermsConditions(e.target.value)} />
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex justify-end gap-3">
-                            <Button type="button" variant="outline" onClick={() => navigate('/quotations')}>
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={items.length === 0 || !buyerId || createQuotation.isPending || updateQuotation.isPending}
-                            >
-                                {(createQuotation.isPending || updateQuotation.isPending) && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {isEditMode ? 'Update Quotation' : 'Create Quotation'}
-                            </Button>
-                        </div>
-                    </form>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-medium">Notes & Remarks</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Textarea
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                className="min-h-[100px]"
+                                placeholder="Internal notes or specific remarks..."
+                            />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-medium">Terms & Conditions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Textarea
+                                value={termsConditions}
+                                onChange={(e) => setTermsConditions(e.target.value)}
+                                className="min-h-[100px]"
+                                placeholder="Standard terms for the customer..."
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
-        </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-4 pb-10">
+                    <Button type="button" variant="outline" size="lg" onClick={() => navigate('/quotations')} className="w-full sm:w-auto px-10">
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        size="lg"
+                        disabled={items.length === 0 || !buyerId || createQuotation.isPending || updateQuotation.isPending}
+                        className="w-full sm:w-auto px-10 shadow-lg shadow-primary/20"
+                    >
+                        {(createQuotation.isPending || updateQuotation.isPending) && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        {isEditMode ? 'Update Quotation' : 'Save & Generate Quotation'}
+                    </Button>
+                </div>
+            </form>
+        </PageContainer>
     );
 }

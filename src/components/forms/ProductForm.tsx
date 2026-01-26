@@ -43,6 +43,8 @@ const productSchema = z.object({
   purchase_price: z.number().min(0).default(0),
   selling_price: z.number().min(0).default(0),
   tax_percent: z.number().min(0).max(100).default(18),
+  cgst_percent: z.number().min(0).max(100).default(9),
+  sgst_percent: z.number().min(0).max(100).default(9),
   discount_percent: z.number().min(0).max(100).default(0),
   current_stock: z.number().min(0).default(0),
   reorder_level: z.number().min(0).default(10),
@@ -100,6 +102,8 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
       purchase_price: product?.purchase_price ?? 0,
       selling_price: product?.selling_price ?? 0,
       tax_percent: product?.tax_percent ?? 18,
+      cgst_percent: product?.cgst_percent ?? 9,
+      sgst_percent: product?.sgst_percent ?? 9,
       discount_percent: product?.discount_percent ?? 0,
       current_stock: product?.current_stock ?? 0,
       reorder_level: product?.reorder_level ?? 0,
@@ -126,12 +130,24 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
       purchase_price: data.purchase_price,
       selling_price: data.selling_price,
       tax_percent: data.tax_percent,
+      cgst_percent: data.cgst_percent,
+      sgst_percent: data.sgst_percent,
       discount_percent: data.discount_percent,
       current_stock: data.current_stock,
       reorder_level: data.reorder_level,
       status: data.status,
     });
   };
+
+  const watchCgst = form.watch('cgst_percent');
+  const watchSgst = form.watch('sgst_percent');
+
+  useEffect(() => {
+    const totalTax = (watchCgst || 0) + (watchSgst || 0);
+    if (totalTax !== form.getValues('tax_percent')) {
+      form.setValue('tax_percent', totalTax);
+    }
+  }, [watchCgst, watchSgst]);
 
   return (
     <Form {...form}>
@@ -328,15 +344,50 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
             />
             <FormField
               control={form.control}
+              name="cgst_percent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CGST %</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sgst_percent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SGST %</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="tax_percent"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tax %</FormLabel>
+                  <FormLabel>Total Tax %</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      disabled
+                      className="bg-muted"
                     />
                   </FormControl>
                 </FormItem>

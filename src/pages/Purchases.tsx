@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,17 +35,13 @@ import { Plus, Search, Loader2, Eye, Trash2, Download, Pencil, ExternalLink } fr
 import { exportPurchasesToExcel } from '@/lib/excelExport';
 
 export default function Purchases() {
+  const navigate = useNavigate();
   const { data: purchases, isLoading } = usePurchases();
   const { data: suppliers } = useSuppliers();
   const deletePurchase = useDeletePurchase();
   const [search, setSearch] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [viewingPurchase, setViewingPurchase] = useState<string | null>(null);
   const [deletingPurchase, setDeletingPurchase] = useState<{ id: string; purchase_number: string } | null>(null);
-
-  // Fetch full purchase data when editing
-  const { data: fullPurchaseToEdit, isLoading: isLoadingFullPurchase } = usePurchase(editingPurchaseId || '');
 
   const filteredPurchases = purchases?.filter(
     (purchase) =>
@@ -54,16 +51,6 @@ export default function Purchases() {
 
   const getSupplierName = (supplierId: string) => {
     return suppliers?.find((s) => s.id === supplierId)?.company_name || '-';
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setEditingPurchaseId(null);
-  };
-
-  const handleEdit = (id: string) => {
-    setEditingPurchaseId(id);
-    setIsFormOpen(true);
   };
 
   const handleDelete = () => {
@@ -87,7 +74,7 @@ export default function Purchases() {
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => navigate('/purchases/new')}>
             <Plus className="mr-2 h-4 w-4" />
             New Purchase
           </Button>
@@ -171,7 +158,7 @@ export default function Purchases() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEdit(purchase.id)}
+                        onClick={() => navigate(`/purchases/edit/${purchase.id}`)}
                         className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                       >
                         <Pencil className="h-4 w-4" />
@@ -192,26 +179,6 @@ export default function Purchases() {
           </TableBody>
         </Table>
       </div>
-
-      {/* Purchase Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingPurchaseId ? `Edit Purchase: ${fullPurchaseToEdit?.purchase_number || ''}` : 'New Purchase Entry'}</DialogTitle>
-          </DialogHeader>
-          {editingPurchaseId && isLoadingFullPurchase ? (
-            <div className="py-12 flex justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <PurchaseForm
-              initialData={fullPurchaseToEdit}
-              onSuccess={handleCloseForm}
-              onCancel={handleCloseForm}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* View Purchase Details Dialog */}
       <Dialog open={!!viewingPurchase} onOpenChange={() => setViewingPurchase(null)}>
