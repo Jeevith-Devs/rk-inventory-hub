@@ -61,10 +61,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Check for local authentication first
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    const username = localStorage.getItem('username');
-    const userEmail = localStorage.getItem('userEmail');
+    const isAuthenticated = localStorage.getItem('rk_isAuthenticated');
+    const username = localStorage.getItem('rk_username');
+    const userEmail = localStorage.getItem('rk_userEmail');
 
     if (isAuthenticated === 'true' && username && userEmail) {
       // Create a mock user object
@@ -85,6 +87,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
+
+        // Handle race conditions where session might be null but event suggests otherwise
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -92,8 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id).then(role => {
-              setUserRole(role);
-              setLoading(false);
+              if (mounted) {
+                setUserRole(role);
+                setLoading(false);
+              }
             });
           }, 0);
         } else {
@@ -105,20 +120,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
         fetchUserRole(session.user.id).then(role => {
-          setUserRole(role);
-          setLoading(false);
+          if (mounted) {
+            setUserRole(role);
+            setLoading(false);
+          }
         });
       } else {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -131,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -147,12 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     // Clear local authentication
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('username');
-    localStorage.removeItem('userEmail');
+    localStorage.removeItem('rk_isAuthenticated');
+    localStorage.removeItem('rk_username');
+    localStorage.removeItem('rk_userEmail');
     setUser(null);
     setUserRole(null);
-    
+
     await supabase.auth.signOut();
   };
 
