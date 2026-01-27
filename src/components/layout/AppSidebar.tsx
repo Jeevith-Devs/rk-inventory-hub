@@ -189,6 +189,17 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sidebar-accent-foreground">
+            {user?.email?.[0].toUpperCase() || 'U'}
+          </div>
+          {!collapsed && (
+            <div className="flex-1 overflow-hidden">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">
+                {user?.email}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 capitalize">{userRole || 'User'}</p>
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -196,6 +207,14 @@ export function AppSidebar() {
             className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
           >
             {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={signOut}
+            className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          >
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </SidebarFooter>

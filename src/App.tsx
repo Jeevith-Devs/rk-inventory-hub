@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { MainLayout } from "@/components/layout/MainLayout";
+import Introduction from "@/pages/Introduction";
+import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Suppliers from "@/pages/Suppliers";
 import Buyers from "@/pages/Buyers";
@@ -28,6 +30,42 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AuthRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -37,9 +75,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Introduction />} />
+              <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
 
-              <Route element={<MainLayout />}>
+              <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/suppliers" element={<Suppliers />} />
                 <Route path="/customers" element={<Buyers />} />
@@ -65,9 +104,10 @@ const App = () => (
                 <Route path="/quotations/edit/:id" element={<QuotationFormPage />} />
               </Route>
 
-              <Route path="/invoice/:id" element={<Invoice />} />
-              <Route path="/quotations/:id" element={<QuotationView />} />
-              <Route path="/purchase-orders/:id" element={<PurchaseOrderView />} />
+              <Route path="/invoice/:id" element={<ProtectedRoute><Invoice /></ProtectedRoute>} />
+              <Route path="/quotations/:id" element={<ProtectedRoute><QuotationView /></ProtectedRoute>} />
+
+              <Route path="/purchase-orders/:id" element={<ProtectedRoute><PurchaseOrderView /></ProtectedRoute>} />
 
 
               <Route path="*" element={<NotFound />} />
