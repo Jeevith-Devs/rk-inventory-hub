@@ -61,6 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // TEMPORARY: Bypass login check and set default user
+    setUser({
+      id: 'temp-admin',
+      email: 'admin@rk.com',
+      user_metadata: { username: 'Admin' }
+    } as any);
+    setUserRole('admin');
+    setLoading(false);
+    return;
+
     let mounted = true;
 
     // Check for local authentication first
