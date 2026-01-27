@@ -80,7 +80,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
   return (
     <div className="w-full bg-white text-black mx-auto print:scale-100 print:bg-white print:text-black page-break-after" style={{ maxWidth: '1000px', height: 'auto', padding: '10px' }}>
       {/* Header Section */}
-      <div className="border-4 border-black mb-0">
+      <div className="border-4 border-black mb-0 flex flex-col min-h-[290mm]">
         {/* Top Company Info */}
         <div className="flex flex-col sm:flex-row print:flex-row justify-between items-start print:items-start p-2 border-b-2 border-black gap-2 sm:gap-4 print:gap-2">
           <div className="flex-1 w-full sm:w-auto print:w-auto">
@@ -185,8 +185,8 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
         </div>
 
         {/* Items Table */}
-        <div className="border-b-2 border-black overflow-x-auto print:overflow-visible">
-          <table className="w-full border-collapse min-w-[600px] print:min-w-full">
+        <div className="border-b-2 border-black overflow-x-auto print:overflow-visible flex-1">
+          <table className="w-full border-collapse min-w-[600px] print:min-w-full h-full">
             <thead>
               <tr className="border-b-2 border-black">
                 <th className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] font-bold text-left w-8 print:w-8">S.NO.</th>
@@ -203,7 +203,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                 sale.sale_items.map((item, index) => {
                   const product = products?.find((p) => p.id === item.product_id);
                   return (
-                    <tr key={item.id} className="border-b border-black">
+                    <tr key={item.id} className="border-b border-black h-fit">
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-center">{index + 1}</td>
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] break-words print:break-words">{product?.name || 'N/A'}</td>
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-center">{product?.hsn_code || '-'}</td>
@@ -219,14 +219,18 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                   <td colSpan={7} className="p-2 text-center text-[8px] sm:text-[9px] print:text-[9px] text-black">No items</td>
                 </tr>
               )}
-              {/* Empty rows */}
-              {sale.sale_items && sale.sale_items.length < 2 &&
-                Array(2 - (sale.sale_items?.length || 0)).fill(0).map((_, i) => (
-                  <tr key={`empty-${i}`} className="border-b border-black">
-                    <td colSpan={7} className="p-2.5"></td>
-                  </tr>
-                ))
-              }
+              {/* Empty rows to fill the table space */}
+              {Array.from({ length: Math.max(0, 18 - (sale.sale_items?.length || 0)) }).map((_, i) => (
+                <tr key={`empty-${i}`} className="border-b border-black">
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                  <td className="p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
