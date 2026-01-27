@@ -220,7 +220,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
                 </tr>
               )}
               {/* Empty rows to fill the table space */}
-              {Array.from({ length: Math.max(0, 17 - (sale.sale_items?.length || 0)) }).map((_, i) => (
+              {Array.from({ length: Math.max(0, 14 - (sale.sale_items?.length || 0)) }).map((_, i) => (
                 <tr key={`empty-${i}`} className="border-b border-black">
                   <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
                   <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px]">&nbsp;</td>
