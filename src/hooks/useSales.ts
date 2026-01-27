@@ -175,7 +175,7 @@ export const useUpdateSale = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Sale updated successfully' });
+      // toast({ title: 'Sale updated successfully' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error updating sale', description: error.message, variant: 'destructive' });
