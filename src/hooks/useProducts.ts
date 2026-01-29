@@ -181,12 +181,13 @@ export const useLowStockProducts = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .filter('current_stock', 'lte', 'reorder_level')
         .eq('status', 'active')
         .order('current_stock');
 
       if (error) throw error;
-      return data as Product[];
+
+      // Filter in application code since PostgREST doesn't support column-to-column comparison
+      return (data as Product[]).filter(p => (p.current_stock || 0) <= (p.reorder_level || 0));
     },
   });
 };

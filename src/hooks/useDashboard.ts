@@ -26,7 +26,6 @@ export const useDashboardStats = () => {
         { count: totalSuppliers },
         { count: totalBuyers },
         { data: products },
-        { data: lowStockProducts },
         { data: monthlyPurchasesData },
         { data: monthlySalesData },
         { data: recentPurchases },
@@ -35,29 +34,25 @@ export const useDashboardStats = () => {
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('suppliers').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('buyers').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('products').select('current_stock, purchase_price').eq('status', 'active'),
-        supabase.from('products').select('*').lte('current_stock', supabase.rpc).eq('status', 'active'),
+        supabase.from('products').select('current_stock, purchase_price, reorder_level').eq('status', 'active'),
         supabase.from('purchases').select('total_amount').gte('created_at', startOfMonth),
         supabase.from('sales').select('grand_total').gte('created_at', startOfMonth),
         supabase.from('purchases').select('*, suppliers(company_name)').order('created_at', { ascending: false }).limit(5),
         supabase.from('sales').select('*, buyers(company_name)').order('created_at', { ascending: false }).limit(5),
       ]);
 
-      // Calculate total stock value
+      // Calculate total stock value and low stock count
+      let lowStockCount = 0;
       const totalStockValue = products?.reduce((acc, p) => {
+        if ((p.current_stock || 0) <= (p.reorder_level || 0)) {
+          lowStockCount++;
+        }
         return acc + ((p.current_stock || 0) * (p.purchase_price || 0));
       }, 0) || 0;
 
       // Calculate monthly totals
       const monthlyPurchases = monthlyPurchasesData?.reduce((acc, p) => acc + (p.total_amount || 0), 0) || 0;
       const monthlySales = monthlySalesData?.reduce((acc, s) => acc + (s.grand_total || 0), 0) || 0;
-
-      // Count low stock products
-      const { count: lowStockCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .filter('current_stock', 'lte', 'reorder_level');
 
       return {
         totalProducts: totalProducts || 0,
