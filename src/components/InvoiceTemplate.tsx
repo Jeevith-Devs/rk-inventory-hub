@@ -1,6 +1,7 @@
 import { useSales } from '@/hooks/useSales';
 import { useBuyers } from '@/hooks/useBuyers';
 import { useProducts } from '@/hooks/useProducts';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useEffect } from 'react';
 import { format } from 'date-fns';
 
@@ -65,11 +66,12 @@ interface InvoiceCopyProps {
   sale: any;
   buyer: any;
   products: any;
+  company: any;
   basicAmount: number;
   totalTax: number;
 }
 
-function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, totalTax }: InvoiceCopyProps) {
+function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAmount, totalTax }: InvoiceCopyProps) {
   const copyLabels = {
     original: 'ORIGINAL COPY',
     duplicate: 'DUPLICATE COPY',
@@ -84,18 +86,22 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
         {/* Top Company Info */}
         <div className="flex flex-col sm:flex-row print:flex-row justify-between items-start print:items-start p-2 border-b-2 border-black gap-2 sm:gap-4 print:gap-2">
           <div className="flex-1 w-full sm:w-auto print:w-auto">
-            <img src="/rk-logo.svg" alt="RK Enterprises Logo" className="h-16 sm:h-20 md:h-24 lg:h-28 print:h-[100px] object-contain mx-auto sm:mx-0 print:mx-0" />
+            <img src="/rk-logo.svg" alt="Company Logo" className="h-16 sm:h-20 md:h-24 lg:h-28 print:h-[100px] object-contain mx-auto sm:mx-0 print:mx-0" />
           </div>
           <div className="flex-1 text-center sm:text-center print:text-center w-full sm:w-auto print:w-auto">
-            <h2 className="text-xs sm:text-sm md:text-base print:text-sm font-bold">RK ENTERPRISES</h2>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">No.23/2,Part,GreenAcres,2ndLayout,Mathur,</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">sriperumbudur taluk, kanchipuram dist-602105</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">rk.enterprises.tn.2025@gmail.com</p>
+            <h2 className="text-xs sm:text-sm md:text-base print:text-sm font-bold">{company?.company_name?.toUpperCase() || 'COMPANY NAME'}</h2>
+            {company?.address && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{company.address}</p>}
+            {(company?.city || company?.state || company?.pincode) && (
+              <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">
+                {[company?.city, company?.state, company?.pincode].filter(Boolean).join(', ')}
+              </p>
+            )}
+            {company?.email && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-all print:break-all">{company.email}</p>}
           </div>
           <div className="flex-1 text-center sm:text-right print:text-right space-y-0 w-full sm:w-auto print:w-auto">
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold">{copyLabels[copyType]}</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words"><span className="font-bold">GSTIN NO :</span> 33BLQPP6954N1Z7</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px]"><span className="font-bold">Phone :</span> +91 7904982523</p>
+            {company?.gst_no && <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words"><span className="font-bold">GSTIN NO :</span> {company.gst_no}</p>}
+            {company?.phone && <p className="text-[9px] sm:text-[10px] print:text-[10px]"><span className="font-bold">Phone :</span> {company.phone}</p>}
           </div>
         </div>
 
@@ -299,17 +305,17 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, basicAmount, tot
           </div>
           <div className="border-b-2 md:border-b-0 print:border-b-0 md:border-r-2 print:border-r-2 border-black p-2">
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Bank Name</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-words print:break-words">FEDERAL BANK</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-words print:break-words">{company?.bank_name || '-'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Ac.No</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">181702000008879</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">{company?.bank_account_no || '-'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">IFSC Code</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">FDRL0001817</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">{company?.bank_ifsc || '-'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Branch</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">ORAGADAM</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] break-words print:break-words">{company?.bank_branch || '-'}</p>
           </div>
           <div className="p-2 flex flex-col justify-between">
             <div>
-              <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">for RK ENTERPRISES</p>
+              <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold text-right">for {company?.company_name?.toUpperCase() || 'COMPANY'}</p>
             </div>
             <div className="text-right mt-4 h-20 border-b border-black"></div>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] text-right font-bold">Authorized Signature</p>
@@ -449,6 +455,7 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
   const { data: sales } = useSales();
   const { data: buyers } = useBuyers();
   const { data: products } = useProducts();
+  const { data: company } = useCompanySettings();
 
   const sale = sales?.find((s) => s.id === saleId);
   const buyer = buyers?.find((b) => b.id === sale?.buyer_id);
@@ -489,6 +496,7 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
           sale={sale}
           buyer={buyer}
           products={products}
+          company={company}
           basicAmount={basicAmount}
           totalTax={totalTax}
         />

@@ -177,14 +177,12 @@ export function AppSidebar() {
           </Collapsible>
         </SidebarGroup>
 
-        {/* Settings - Admin Only */}
-        {userRole === 'admin' && (
-          <SidebarGroup>
-            <SidebarMenu>
-              <NavItem item={{ title: 'Settings', url: '/settings', icon: Settings }} />
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
+        {/* Settings */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <NavItem item={{ title: 'Settings', url: '/settings', icon: Settings }} />
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
