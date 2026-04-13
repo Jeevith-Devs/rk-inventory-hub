@@ -307,7 +307,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Bank Name</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-words print:break-words">{company?.bank_name || '-'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Ac.No</p>
-            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">{company?.bank_account_no || '-'}</p>
+            <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">{company?.bank_account_no || '18170200008879'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">IFSC Code</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] mb-1 break-all print:break-all">{company?.bank_ifsc || '-'}</p>
             <p className="text-[9px] sm:text-[10px] print:text-[10px] font-bold mb-0.5">Branch</p>

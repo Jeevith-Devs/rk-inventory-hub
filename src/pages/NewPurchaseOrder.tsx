@@ -34,6 +34,7 @@ import { CalendarIcon, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreatePurchaseOrder, useUpdatePurchaseOrder, usePurchaseOrder } from '@/hooks/usePurchaseOrders';
+import { useNextPurchaseNumber } from '@/hooks/useInvoiceSequence';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +72,7 @@ export default function PurchaseOrderFormPage() {
     const createPO = useCreatePurchaseOrder();
     const updatePO = useUpdatePurchaseOrder();
     const { data: existingPO, isLoading: isLoadingPO } = usePurchaseOrder(id || '');
+    const { data: nextPONumber } = useNextPurchaseNumber();
 
     // Fetch Vendors and Products
     const { data: suppliers } = useQuery({
@@ -139,19 +141,12 @@ export default function PurchaseOrderFormPage() {
         });
     }, [watchedItems]);
 
-    // Generate Auto PO Number on Load
+    // Auto-fill PO Number with financial-year-aware sequence on Load
     useEffect(() => {
-        if (!isEditMode) {
-            const generatePONumber = async () => {
-                const { count } = await (supabase.from('purchase_orders' as any) as any).select('*', { count: 'exact', head: true });
-                const nextNum = (count || 0) + 1;
-                const currentYear = new Date().getFullYear().toString().slice(-2);
-                const nextYear = (new Date().getFullYear() + 1).toString().slice(-2);
-                form.setValue('po_number', `SMR-PO-${String(nextNum).padStart(3, '0')}/${currentYear}-${nextYear}`);
-            };
-            generatePONumber();
+        if (!isEditMode && nextPONumber) {
+            form.setValue('po_number', nextPONumber);
         }
-    }, [isEditMode, form]);
+    }, [isEditMode, nextPONumber, form]);
 
     // Load Existing Data for Edit
     useEffect(() => {
