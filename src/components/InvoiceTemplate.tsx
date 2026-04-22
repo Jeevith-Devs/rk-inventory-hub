@@ -80,9 +80,9 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
   };
 
   return (
-    <div className="w-full bg-white text-black mx-auto print:scale-100 print:bg-white print:text-black page-break-after" style={{ maxWidth: '1000px', height: 'auto', padding: '10px' }}>
+    <div className="w-full bg-white text-black mx-auto print:scale-100 print:bg-white print:text-black page-break-after" style={{ width: '210mm', minHeight: '297mm', padding: '10mm', boxSizing: 'border-box' }}>
       {/* Header Section */}
-      <div className="border-4 border-black mb-0 flex flex-col min-h-[290mm]">
+      <div className="border-4 border-black mb-0 flex flex-col min-h-[275mm] h-full">
         {/* Top Company Info */}
         <div className="flex flex-col sm:flex-row print:flex-row justify-between items-start print:items-start p-2 border-b-2 border-black gap-2 sm:gap-4 print:gap-2">
           <div className="flex-1 w-full sm:w-auto print:w-auto">
@@ -360,8 +360,8 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
           }
           .print\\:scale-100 {
             transform: scale(1) !important;
-            width: 100% !important;
-            max-width: 1000px !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
           }
           .print\\:flex-row {
             flex-direction: row !important;
@@ -444,6 +444,10 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
           table, thead, tbody, tr, td, th {
             background: white !important;
             color: black !important;
+          }
+          /* Fix for box-sizing to ensure borders and padding are included in dimensions */
+          * {
+            box-sizing: border-box !important;
           }
         }
       `}</style>
