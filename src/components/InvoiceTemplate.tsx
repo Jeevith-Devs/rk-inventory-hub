@@ -216,7 +216,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-center">{product?.unit || 'PCS'}</td>
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-right">{item.quantity.toFixed(2)}</td>
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-right">₹{item.unit_price.toFixed(2)}</td>
-                      <td className="p-1 text-[8px] sm:text-[9px] print:text-[9px] text-right">Rs. {Math.floor(item.total_amount)}</td>
+                      <td className="p-1 text-[8px] sm:text-[9px] print:text-[9px] text-right">₹{(item.quantity * item.unit_price).toFixed(2)}</td>
                     </tr>
                   );
                 })
