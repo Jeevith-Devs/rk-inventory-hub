@@ -95,7 +95,6 @@ export default function StockOutFormPage() {
     const [showNewBuyerDialog, setShowNewBuyerDialog] = useState(false);
     const [showNewProductDialog, setShowNewProductDialog] = useState(false);
     const [linkedPurchaseId, setLinkedPurchaseId] = useState<string>('');
-    const [purchaseSearch, setPurchaseSearch] = useState('');
 
     const form = useForm<SaleFormData>({
         resolver: zodResolver(saleSchema),
@@ -291,14 +290,14 @@ export default function StockOutFormPage() {
                         <CardHeader className="py-4">
                             <CardTitle className="text-sm font-medium">Customer & Basic Info</CardTitle>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <CardContent className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                             <FormField
                                 control={form.control}
                                 name="buyer_id"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <div className="flex justify-between items-center mb-1">
-                                            <FormLabel>Customer *</FormLabel>
+                                        <div className="flex justify-between items-center h-6 mb-1">
+                                            <FormLabel className="!mb-0">Customer *</FormLabel>
                                             <Dialog open={showNewBuyerDialog} onOpenChange={setShowNewBuyerDialog}>
                                                 <DialogTrigger asChild>
                                                     <Button variant="ghost" size="sm" className="h-6 px-2 text-primary text-xs flex items-center gap-1">
@@ -341,12 +340,37 @@ export default function StockOutFormPage() {
                                     </FormItem>
                                 )}
                             />
+                            <FormItem>
+                                <div className="flex items-center h-6 mb-1">
+                                    <FormLabel className="!mb-0">Link Stock In</FormLabel>
+                                </div>
+                                <Select
+                                    value={linkedPurchaseId || '__none__'}
+                                    onValueChange={(val) => setLinkedPurchaseId(val === '__none__' ? '' : val)}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Stock In..." />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">— None / Not linked —</SelectItem>
+                                        {(purchases || []).map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                {p.purchase_number} ({p.suppliers?.company_name || '—'}) - ₹{(p.total_amount || 0).toLocaleString()}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
                             <FormField
                                 control={form.control}
                                 name="sale_date"
                                 render={({ field }) => (
-                                    <FormItem className="pt-[26px]">
-                                        <FormLabel>Sale Date *</FormLabel>
+                                    <FormItem>
+                                        <div className="flex items-center h-6 mb-1">
+                                            <FormLabel className="!mb-0">Sale Date *</FormLabel>
+                                        </div>
                                         <FormControl>
                                             <Input type="date" {...field} />
                                         </FormControl>
@@ -358,8 +382,10 @@ export default function StockOutFormPage() {
                                 control={form.control}
                                 name="payment_mode"
                                 render={({ field }) => (
-                                    <FormItem className="pt-[26px]">
-                                        <FormLabel>Payment Mode</FormLabel>
+                                    <FormItem>
+                                        <div className="flex items-center h-6 mb-1">
+                                            <FormLabel className="!mb-0">Payment Mode</FormLabel>
+                                        </div>
                                         <Select onValueChange={field.onChange} value={field.value} defaultValue="Credit">
                                             <FormControl>
                                                 <SelectTrigger>
@@ -381,11 +407,18 @@ export default function StockOutFormPage() {
                                 control={form.control}
                                 name="is_gst_invoice"
                                 render={({ field }) => (
-                                    <FormItem className="flex items-center gap-2 pt-[52px]">
-                                        <FormControl>
-                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                        </FormControl>
-                                        <FormLabel className="!mt-0 font-semibold text-primary uppercase text-xs tracking-widest">GST Invoice</FormLabel>
+                                    <FormItem>
+                                        <div className="flex items-center h-6 mb-1">
+                                            <FormLabel className="!mb-0">GST Invoice</FormLabel>
+                                        </div>
+                                        <div className="flex items-center gap-3 h-10">
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <span className="font-semibold text-primary uppercase text-xs tracking-widest">
+                                                {field.value ? 'Yes' : 'No'}
+                                            </span>
+                                        </div>
                                     </FormItem>
                                 )}
                             />
@@ -498,39 +531,6 @@ export default function StockOutFormPage() {
                                     </FormItem>
                                 )}
                             />
-                        </CardContent>
-                    </Card>
-
-                    {/* ─── Link Stock In (Profit Tracking) ─────────────────────────── */}
-                    <Card>
-                        <CardHeader className="py-4">
-                            <CardTitle className="text-sm font-medium">Linked Stock In (for Profit Report)</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="text-sm font-medium mb-2 block">
-                                    Link to Stock In Entry <span className="text-muted-foreground font-normal">(optional)</span>
-                                </label>
-                                <Select
-                                    value={linkedPurchaseId || '__none__'}
-                                    onValueChange={(val) => setLinkedPurchaseId(val === '__none__' ? '' : val)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Stock In (Purchase)..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="__none__">— None / Not linked —</SelectItem>
-                                        {(purchases || []).map(p => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                {p.purchase_number} &nbsp;|&nbsp; {p.suppliers?.company_name || '—'} &nbsp;|&nbsp; {p.purchase_date} &nbsp;|&nbsp; ₹{(p.total_amount || 0).toLocaleString()}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Linking a Stock In allows the Reports page to show profit for this invoice.
-                                </p>
-                            </div>
                         </CardContent>
                     </Card>
 
