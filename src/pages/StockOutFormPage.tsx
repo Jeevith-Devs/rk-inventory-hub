@@ -502,91 +502,35 @@ export default function StockOutFormPage() {
                     </Card>
 
                     {/* ─── Link Stock In (Profit Tracking) ─────────────────────────── */}
-                    <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
+                    <Card>
                         <CardHeader className="py-4">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
-                                <Link2 className="h-4 w-4" />
-                                Link Stock In — Profit Tracking (Optional)
-                            </CardTitle>
+                            <CardTitle className="text-sm font-medium">Linked Stock In (for Profit Report)</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            {linkedPurchaseId ? (
-                                (() => {
-                                    const lp = purchases?.find(p => p.id === linkedPurchaseId);
-                                    return lp ? (
-                                        <div className="flex items-center justify-between p-3 rounded-lg bg-background border border-primary/30">
-                                            <div className="flex items-center gap-3">
-                                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                                                <div>
-                                                    <p className="text-sm font-semibold">{lp.purchase_number}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {lp.suppliers?.company_name || 'Unknown Supplier'} &bull; {lp.purchase_date} &bull; ₹{(lp.total_amount || 0).toLocaleString()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Linked ✓</Badge>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setLinkedPurchaseId(''); setPurchaseSearch(''); }}
-                                                    className="text-muted-foreground hover:text-destructive transition-colors ml-1"
-                                                    title="Remove link"
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : null;
-                                })()
-                            ) : (
-                                <div className="space-y-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Select the Stock In (Purchase) entry that corresponds to goods being sold in this invoice. This enables per-invoice profit calculation in Reports.
-                                    </p>
-                                    <input
-                                        type="text"
-                                        placeholder="Search by Purchase # or Supplier name..."
-                                        value={purchaseSearch}
-                                        onChange={(e) => setPurchaseSearch(e.target.value)}
-                                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                    />
-                                    <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
-                                        {(purchases || [])
-                                            .filter(p => {
-                                                const q = purchaseSearch.toLowerCase();
-                                                return !q ||
-                                                    (p.purchase_number || '').toLowerCase().includes(q) ||
-                                                    (p.suppliers?.company_name || '').toLowerCase().includes(q) ||
-                                                    (p.invoice_number || '').toLowerCase().includes(q);
-                                            })
-                                            .slice(0, 20)
-                                            .map(p => (
-                                                <button
-                                                    key={p.id}
-                                                    type="button"
-                                                    onClick={() => { setLinkedPurchaseId(p.id); setPurchaseSearch(''); }}
-                                                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/50 transition-colors"
-                                                >
-                                                    <div>
-                                                        <span className="text-xs font-semibold font-mono">{p.purchase_number}</span>
-                                                        {p.invoice_number && (
-                                                            <span className="text-xs text-muted-foreground ml-2">(Inv: {p.invoice_number})</span>
-                                                        )}
-                                                        <span className="text-xs text-muted-foreground ml-2">— {p.suppliers?.company_name || '—'}</span>
-                                                    </div>
-                                                    <div className="text-right shrink-0 ml-4">
-                                                        <span className="text-xs font-medium">₹{(p.total_amount || 0).toLocaleString()}</span>
-                                                        <span className="text-xs text-muted-foreground block">{p.purchase_date}</span>
-                                                    </div>
-                                                </button>
-                                            ))
-                                        }
-                                        {(purchases || []).length === 0 && (
-                                            <p className="text-center text-xs text-muted-foreground py-4">No purchases found</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                    Link to Stock In Entry <span className="text-muted-foreground font-normal">(optional)</span>
+                                </label>
+                                <Select
+                                    value={linkedPurchaseId || '__none__'}
+                                    onValueChange={(val) => setLinkedPurchaseId(val === '__none__' ? '' : val)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Stock In (Purchase)..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">— None / Not linked —</SelectItem>
+                                        {(purchases || []).map(p => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                {p.purchase_number} &nbsp;|&nbsp; {p.suppliers?.company_name || '—'} &nbsp;|&nbsp; {p.purchase_date} &nbsp;|&nbsp; ₹{(p.total_amount || 0).toLocaleString()}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Linking a Stock In allows the Reports page to show profit for this invoice.
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
 
