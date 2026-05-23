@@ -2,6 +2,32 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// ─── Linked Purchase Helpers ───────────────────────────────────────────────
+// We embed a hidden tag in the notes field to link a sale to a purchase.
+// Format: \n[LINKED_PURCHASE:purchase-uuid]
+const LINK_TAG_REGEX = /\n?\[LINKED_PURCHASE:([^\]]+)\]/;
+
+/** Extract the linked purchase ID from a sale's notes field, or null. */
+export function extractLinkedPurchaseId(notes: string | null): string | null {
+  if (!notes) return null;
+  const match = notes.match(LINK_TAG_REGEX);
+  return match ? match[1] : null;
+}
+
+/** Return notes with the hidden tag stripped (for display). */
+export function stripLinkedPurchaseTag(notes: string | null): string {
+  if (!notes) return '';
+  return notes.replace(LINK_TAG_REGEX, '').trim();
+}
+
+/** Append the hidden link tag to notes. Pass purchaseId=null to clear. */
+export function embedLinkedPurchaseTag(notes: string, purchaseId: string | null): string {
+  const cleaned = stripLinkedPurchaseTag(notes);
+  if (!purchaseId) return cleaned;
+  return cleaned ? `${cleaned}\n[LINKED_PURCHASE:${purchaseId}]` : `[LINKED_PURCHASE:${purchaseId}]`;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 export type PaymentMode = 'Cash' | 'UPI' | 'NEFT' | 'Credit' | 'Cheque';
 export type TransportMode = 'Road' | 'Courier' | 'Pickup' | 'Rail' | 'Air';
 export type PaymentStatus = 'Unpaid' | 'Partial' | 'Paid' | 'Overdue';

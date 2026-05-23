@@ -30,7 +30,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useCreatePurchase, useUpdatePurchase, usePurchase } from '@/hooks/usePurchases';
+import { useCreatePurchase, useUpdatePurchase, usePurchase, embedTransportTag, extractTransportCharges } from '@/hooks/usePurchases';
 import { useSuppliers, useCreateSupplier } from '@/hooks/useSuppliers';
 import { useProducts, useCreateProduct } from '@/hooks/useProducts';
 import { useNextPurchaseNumber } from '@/hooks/useInvoiceSequence';
@@ -50,6 +50,7 @@ const purchaseSchema = z.object({
     purchase_date: z.string().min(1, 'Purchase date is required'),
     invoice_number: z.string().optional(),
     invoice_date: z.string().optional(),
+    transport_charges: z.number().min(0).default(0),
     notes: z.string().optional(),
 });
 
@@ -102,6 +103,7 @@ export default function StockInFormPage() {
             purchase_date: format(new Date(), 'yyyy-MM-dd'),
             invoice_number: '',
             invoice_date: '',
+            transport_charges: 0,
             notes: '',
         },
     });
@@ -113,6 +115,7 @@ export default function StockInFormPage() {
                 purchase_date: existingPurchase.purchase_date,
                 invoice_number: existingPurchase.invoice_number || '',
                 invoice_date: existingPurchase.invoice_date || '',
+                transport_charges: extractTransportCharges(existingPurchase.notes),
                 notes: existingPurchase.notes || '',
             });
 
@@ -237,6 +240,9 @@ export default function StockInFormPage() {
         { subtotal: 0, discount: 0, tax: 0, total: 0 }
     );
 
+    const transportCharges = form.watch('transport_charges') || 0;
+    const grandTotal = totals.total + transportCharges;
+
     const onSubmit = async (data: PurchaseFormData) => {
         if (items.length === 0) return;
 
@@ -252,6 +258,9 @@ export default function StockInFormPage() {
             if (!driveLink) return;
         }
 
+        // Embed transport charges into notes (no DB column needed)
+        const notesWithTransport = embedTransportTag(data.notes || '', transportCharges);
+
         const purchasePayload = {
             purchase_number: pNumber,
             supplier_id: data.supplier_id,
@@ -261,8 +270,8 @@ export default function StockInFormPage() {
             subtotal: totals.subtotal,
             discount_amount: totals.discount,
             tax_amount: totals.tax,
-            total_amount: totals.total,
-            notes: data.notes || null,
+            total_amount: grandTotal,
+            notes: notesWithTransport || null,
             bill_image_url: driveLink,
             created_by: existingPurchase?.created_by || user?.id || null,
             payment_status: existingPurchase?.payment_status || 'Unpaid',
@@ -408,6 +417,25 @@ export default function StockInFormPage() {
                                     </FormItem>
                                 )}
                             />
+                            <FormField
+                                control={form.control}
+                                name="transport_charges"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Transport Chg.</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                {...field}
+                                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
                         </CardContent>
                     </Card>
 
@@ -533,9 +561,15 @@ export default function StockInFormPage() {
                                             <span>Discount</span>
                                             <span className="font-medium text-destructive">-₹{totals.discount.toFixed(2)}</span>
                                         </div>
+                                        {transportCharges > 0 && (
+                                            <div className="flex justify-between text-sm text-muted-foreground">
+                                                <span>Transport Charges</span>
+                                                <span className="font-medium text-foreground">₹{transportCharges.toFixed(2)}</span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between font-bold text-xl pt-2 border-t border-muted text-primary">
                                             <span>Net Payable</span>
-                                            <span>₹{totals.total.toFixed(2)}</span>
+                                            <span>₹{grandTotal.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>

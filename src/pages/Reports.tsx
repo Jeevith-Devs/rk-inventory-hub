@@ -19,13 +19,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { usePurchases } from '@/hooks/usePurchases';
-import { useSales } from '@/hooks/useSales';
+import { useSales, extractLinkedPurchaseId } from '@/hooks/useSales';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBuyers } from '@/hooks/useBuyers';
 import { useProducts } from '@/hooks/useProducts';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { Download, TrendingUp, TrendingDown, Package, AlertTriangle } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, Package, AlertTriangle, Link2 } from 'lucide-react';
 
 export default function Reports() {
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -62,6 +63,24 @@ export default function Reports() {
   const getSupplierName = (id: string) => suppliers?.find((s) => s.id === id)?.company_name || '-';
   const getBuyerName = (id: string) => buyers?.find((b) => b.id === id)?.company_name || '-';
 
+  // ─── Per-Invoice Profit (via linked purchase tag) ────────────────────────
+  const profitRows = (filteredSales || []).map(sale => {
+    const linkedPurchaseId = extractLinkedPurchaseId(sale.notes);
+    const linkedPurchase = linkedPurchaseId ? purchases?.find(p => p.id === linkedPurchaseId) : null;
+    const saleAmount = sale.grand_total || 0;
+    const purchaseCost = linkedPurchase?.total_amount || null;
+    const profitAmt = purchaseCost !== null ? saleAmount - purchaseCost : null;
+    const marginPct = (profitAmt !== null && saleAmount > 0) ? (profitAmt / saleAmount) * 100 : null;
+    return { sale, linkedPurchase, saleAmount, purchaseCost, profitAmt, marginPct };
+  });
+
+  const linkedProfitRows = profitRows.filter(r => r.linkedPurchase !== null);
+  const totalLinkedProfit = linkedProfitRows.reduce((sum, r) => sum + (r.profitAmt || 0), 0);
+  const avgMargin = linkedProfitRows.length > 0
+    ? linkedProfitRows.reduce((sum, r) => sum + (r.marginPct || 0), 0) / linkedProfitRows.length
+    : 0;
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <PageContainer title="Reports">
       {/* Date Filters */}
@@ -87,7 +106,7 @@ export default function Reports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Purchases</CardTitle>
@@ -126,6 +145,20 @@ export default function Reports() {
             </p>
           </CardContent>
         </Card>
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-primary">Linked Invoice Profit</CardTitle>
+            <Link2 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${totalLinkedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ₹{totalLinkedProfit.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {linkedProfitRows.length} linked · avg {avgMargin.toFixed(1)}% margin
+            </p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
@@ -142,6 +175,7 @@ export default function Reports() {
         <TabsList>
           <TabsTrigger value="purchases">Purchases Report</TabsTrigger>
           <TabsTrigger value="sales">Sales Report</TabsTrigger>
+          <TabsTrigger value="profit">Profit Report</TabsTrigger>
           <TabsTrigger value="stock">Stock Report</TabsTrigger>
         </TabsList>
 
@@ -220,6 +254,83 @@ export default function Reports() {
                     {(!filteredSales || filteredSales.length === 0) && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No sales in this period
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── Profit Report Tab ──────────────────────────────────────────── */}
+        <TabsContent value="profit">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-primary" />
+                Per-Invoice Profit Report
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Only invoices that have been linked to a Stock In entry show a profit figure.
+                Link a Stock In via the <span className="font-semibold">New Stock Out</span> form.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Linked Purchase #</TableHead>
+                      <TableHead className="text-right">Sale Amount</TableHead>
+                      <TableHead className="text-right">Purchase Cost</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead className="text-right">Margin %</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {profitRows.map(({ sale, linkedPurchase, saleAmount, purchaseCost, profitAmt, marginPct }) => (
+                      <TableRow key={sale.id}>
+                        <TableCell className="text-xs">{format(parseISO(sale.sale_date), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="font-mono text-xs">{sale.invoice_number}</TableCell>
+                        <TableCell className="text-xs">{getBuyerName(sale.buyer_id)}</TableCell>
+                        <TableCell>
+                          {linkedPurchase ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs font-mono">
+                              {linkedPurchase.purchase_number}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">Not linked</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-medium">₹{saleAmount.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-xs">
+                          {purchaseCost !== null ? `₹${purchaseCost.toLocaleString()}` : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          {profitAmt !== null ? (
+                            <span className={profitAmt >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              ₹{profitAmt.toLocaleString()}
+                            </span>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          {marginPct !== null ? (
+                            <span className={marginPct >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              {marginPct.toFixed(1)}%
+                            </span>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {profitRows.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                           No sales in this period
                         </TableCell>
                       </TableRow>

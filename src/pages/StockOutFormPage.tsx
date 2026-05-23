@@ -32,16 +32,18 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useCreateSale, useUpdateSale, useSale } from '@/hooks/useSales';
+import { useCreateSale, useUpdateSale, useSale, embedLinkedPurchaseTag, extractLinkedPurchaseId } from '@/hooks/useSales';
 import { useBuyers, useCreateBuyer } from '@/hooks/useBuyers';
 import { useProducts, useCreateProduct } from '@/hooks/useProducts';
+import { usePurchases } from '@/hooks/usePurchases';
 import { useNextInvoiceNumber } from '@/hooks/useInvoiceSequence';
-import { Loader2, Plus, Trash2, ArrowLeft, UserPlus, PackagePlus } from 'lucide-react';
+import { Loader2, Plus, Trash2, ArrowLeft, UserPlus, PackagePlus, Link2, X, CheckCircle2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { BuyerForm } from '@/components/forms/BuyerForm';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { Constants } from '@/integrations/supabase/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const saleSchema = z.object({
     buyer_id: z.string().min(1, 'Customer is required'),
@@ -79,6 +81,7 @@ export default function StockOutFormPage() {
 
     const { data: buyers } = useBuyers();
     const { data: products } = useProducts();
+    const { data: purchases } = usePurchases();
     const createSale = useCreateSale();
     const updateSale = useUpdateSale();
     const createBuyer = useCreateBuyer();
@@ -91,6 +94,8 @@ export default function StockOutFormPage() {
     const [quantity, setQuantity] = useState('');
     const [showNewBuyerDialog, setShowNewBuyerDialog] = useState(false);
     const [showNewProductDialog, setShowNewProductDialog] = useState(false);
+    const [linkedPurchaseId, setLinkedPurchaseId] = useState<string>('');
+    const [purchaseSearch, setPurchaseSearch] = useState('');
 
     const form = useForm<SaleFormData>({
         resolver: zodResolver(saleSchema),
@@ -140,6 +145,9 @@ export default function StockOutFormPage() {
                     total_amount: Number(item.total_amount),
                 })));
             }
+            // Restore linked purchase from hidden tag in notes
+            const linked = extractLinkedPurchaseId(existingSale.notes);
+            if (linked) setLinkedPurchaseId(linked);
         }
     }, [isEditMode, existingSale, form]);
 
@@ -197,6 +205,9 @@ export default function StockOutFormPage() {
 
         const halfTax = totals.tax / 2;
 
+        // Embed the linked purchase tag into notes (invisible in invoice PDF)
+        const notesWithTag = embedLinkedPurchaseTag(data.notes || '', linkedPurchaseId || null);
+
         const saleData = {
             invoice_number: isEditMode ? existingSale!.invoice_number : invoiceNumber!,
             buyer_id: data.buyer_id,
@@ -219,7 +230,7 @@ export default function StockOutFormPage() {
             round_off: 0,
             created_by: null,
             grand_total: grandTotal,
-            notes: data.notes || null,
+            notes: notesWithTag || null,
             payment_status: existingSale?.payment_status || 'Unpaid',
             paid_amount: existingSale?.paid_amount || 0,
             due_date: existingSale?.due_date || null,
@@ -487,6 +498,95 @@ export default function StockOutFormPage() {
                                     </FormItem>
                                 )}
                             />
+                        </CardContent>
+                    </Card>
+
+                    {/* ─── Link Stock In (Profit Tracking) ─────────────────────────── */}
+                    <Card className="border-2 border-dashed border-primary/20 bg-primary/5">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
+                                <Link2 className="h-4 w-4" />
+                                Link Stock In — Profit Tracking (Optional)
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {linkedPurchaseId ? (
+                                (() => {
+                                    const lp = purchases?.find(p => p.id === linkedPurchaseId);
+                                    return lp ? (
+                                        <div className="flex items-center justify-between p-3 rounded-lg bg-background border border-primary/30">
+                                            <div className="flex items-center gap-3">
+                                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-semibold">{lp.purchase_number}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {lp.suppliers?.company_name || 'Unknown Supplier'} &bull; {lp.purchase_date} &bull; ₹{(lp.total_amount || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">Linked ✓</Badge>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setLinkedPurchaseId(''); setPurchaseSearch(''); }}
+                                                    className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                                                    title="Remove link"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : null;
+                                })()
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        Select the Stock In (Purchase) entry that corresponds to goods being sold in this invoice. This enables per-invoice profit calculation in Reports.
+                                    </p>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by Purchase # or Supplier name..."
+                                        value={purchaseSearch}
+                                        onChange={(e) => setPurchaseSearch(e.target.value)}
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    />
+                                    <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
+                                        {(purchases || [])
+                                            .filter(p => {
+                                                const q = purchaseSearch.toLowerCase();
+                                                return !q ||
+                                                    (p.purchase_number || '').toLowerCase().includes(q) ||
+                                                    (p.suppliers?.company_name || '').toLowerCase().includes(q) ||
+                                                    (p.invoice_number || '').toLowerCase().includes(q);
+                                            })
+                                            .slice(0, 20)
+                                            .map(p => (
+                                                <button
+                                                    key={p.id}
+                                                    type="button"
+                                                    onClick={() => { setLinkedPurchaseId(p.id); setPurchaseSearch(''); }}
+                                                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                                                >
+                                                    <div>
+                                                        <span className="text-xs font-semibold font-mono">{p.purchase_number}</span>
+                                                        {p.invoice_number && (
+                                                            <span className="text-xs text-muted-foreground ml-2">(Inv: {p.invoice_number})</span>
+                                                        )}
+                                                        <span className="text-xs text-muted-foreground ml-2">— {p.suppliers?.company_name || '—'}</span>
+                                                    </div>
+                                                    <div className="text-right shrink-0 ml-4">
+                                                        <span className="text-xs font-medium">₹{(p.total_amount || 0).toLocaleString()}</span>
+                                                        <span className="text-xs text-muted-foreground block">{p.purchase_date}</span>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        }
+                                        {(purchases || []).length === 0 && (
+                                            <p className="text-center text-xs text-muted-foreground py-4">No purchases found</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

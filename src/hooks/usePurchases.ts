@@ -2,6 +2,31 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// ─── Transport Charges Helpers (stored in notes field) ─────────────────────
+// Format embedded in notes: [TRANSPORT_CHARGES:1500.00]
+const TRANSPORT_TAG_REGEX = /\n?\[TRANSPORT_CHARGES:([^\]]+)\]/;
+
+/** Extract transport charges amount from a purchase notes field, or 0. */
+export function extractTransportCharges(notes: string | null): number {
+  if (!notes) return 0;
+  const match = notes.match(TRANSPORT_TAG_REGEX);
+  return match ? parseFloat(match[1]) || 0 : 0;
+}
+
+/** Return notes with the transport tag stripped (for display). */
+export function stripTransportTag(notes: string | null): string {
+  if (!notes) return '';
+  return notes.replace(TRANSPORT_TAG_REGEX, '').trim();
+}
+
+/** Embed the transport charges tag into notes. Pass 0 to clear. */
+export function embedTransportTag(notes: string, amount: number): string {
+  const cleaned = stripTransportTag(notes);
+  if (!amount || amount <= 0) return cleaned;
+  return cleaned ? `${cleaned}\n[TRANSPORT_CHARGES:${amount}]` : `[TRANSPORT_CHARGES:${amount}]`;
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 export interface Purchase {
   id: string;
   purchase_number: string;
