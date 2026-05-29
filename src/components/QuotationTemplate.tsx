@@ -61,11 +61,11 @@ export function QuotationTemplate({ quotationId }: QuotationTemplateProps) {
                 {/* Header - Logo on Left, Quotation Details on Right */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
                     {/* Left: Logo Section */}
-                    <div className="border-2 border-blue-600 bg-blue-50 p-3 flex items-center gap-3">
+                    <div className="border-2 border-blue-600 bg-white p-3 flex items-center gap-3">
                         <img
                             src="/rk-logo.svg"
                             alt="RK Enterprises Logo"
-                            className="w-20 h-20 object-contain flex-shrink-0"
+                            className="w-28 h-28 object-contain flex-shrink-0"
                         />
                         <div>
                             <h1 className="text-lg font-bold text-blue-700 leading-tight">
@@ -196,7 +196,7 @@ export function QuotationTemplate({ quotationId }: QuotationTemplateProps) {
 
                         {/* Empty rows to fill the table */}
                         {[...Array(Math.max(0, 8 - items.length))].map((_, i) => (
-                            <tr key={`empty-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
+                            <tr key={`empty-${i}`} className="bg-white">
                                 <td className="border border-gray-400 px-1 py-2.5">&nbsp;</td>
                                 <td className="border border-gray-400 px-1 py-2.5">&nbsp;</td>
                                 <td className="border border-gray-400 px-1 py-2.5">&nbsp;</td>
@@ -221,7 +221,7 @@ export function QuotationTemplate({ quotationId }: QuotationTemplateProps) {
                         <div className="text-[9px] space-y-0.5 pl-2 text-black">
                             {quotation.terms_conditions ? (
                                 quotation.terms_conditions.split('\n').map((line, i) => (
-                                    <p key={i}>{i + 1}. {line}</p>
+                                    <p key={i}>{line}</p>
                                 ))
                             ) : (
                                 <>

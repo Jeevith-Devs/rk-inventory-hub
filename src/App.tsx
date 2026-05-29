@@ -26,6 +26,7 @@ import MISReport from "@/pages/MISReport";
 import Settings from "@/pages/Settings";
 import StockInFormPage from "@/pages/StockInFormPage";
 import StockOutFormPage from "@/pages/StockOutFormPage";
+import Expenses from "@/pages/Expenses";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/sales/edit/:id" element={<StockOutFormPage />} />
                 <Route path="/quotations" element={<Quotations />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/expenses" element={<Expenses />} />
                 <Route path="/mis-report" element={<MISReport />} />
                 <Route path="/settings" element={<Settings />} />
 

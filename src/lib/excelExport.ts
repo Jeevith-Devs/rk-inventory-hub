@@ -254,3 +254,154 @@ export const exportPurchasesToExcel = (purchases: PurchaseWithItems[]) => {
     // Download file
     XLSX.writeFile(workbook, filename);
 };
+
+export interface OtherExpense {
+    id: string;
+    date: string;
+    category: string;
+    description: string;
+    amount: number;
+    paymentMode: string;
+}
+
+export const exportFinancialYearToExcel = (
+    fyName: string,
+    startDateStr: string,
+    endDateStr: string,
+    sales: SaleWithItems[],
+    purchases: PurchaseWithItems[],
+    otherExpenses: OtherExpense[]
+) => {
+    const start = new Date(startDateStr);
+    const end = new Date(endDateStr);
+
+    // Helper to check if a date is within range
+    const isWithin = (dStr: string) => {
+        const d = new Date(dStr);
+        return d >= start && d <= end;
+    };
+
+    // Filter items
+    const filteredSales = sales.filter(s => isWithin(s.sale_date));
+    const filteredPurchases = purchases.filter(p => isWithin(p.purchase_date));
+    const filteredOther = otherExpenses.filter(e => isWithin(e.date));
+
+    // Calculations
+    const totalSales = filteredSales.reduce((sum, s) => sum + (s.grand_total || 0), 0);
+    const totalPurchases = filteredPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+    const totalOther = filteredOther.reduce((sum, e) => sum + e.amount, 0);
+    const netBalance = totalSales - totalPurchases - totalOther;
+
+    // 1. Summary Worksheet Data
+    const summaryData: any[] = [
+        ['RK ENTERPRISES - FINANCIAL REPORT', ''],
+        ['Financial Year', fyName],
+        ['Period', `${format(start, 'dd-MM-yyyy')} to ${format(end, 'dd-MM-yyyy')}`],
+        ['', ''],
+        ['Summary Statement', ''],
+        ['Category', 'Total Amount (₹)'],
+        ['Total Revenue (Sales / Stock Out)', totalSales],
+        ['Total Inventory Cost (Purchases / Stock In)', totalPurchases],
+        ['Total Other Operating Expenses', totalOther],
+        ['Net Profit / Loss (P&L)', netBalance],
+        ['Net Profit Margin (%)', totalSales > 0 ? `${((netBalance / totalSales) * 100).toFixed(1)}%` : '0%']
+    ];
+
+    // Sort ledger rows first before adding S.No
+    const tempRows: any[] = [];
+    
+    // Sales Rows (Credit / Inflow)
+    filteredSales.forEach(s => {
+        tempRows.push({
+            dateObj: new Date(s.sale_date),
+            dateStr: format(new Date(s.sale_date), 'dd-MM-yyyy'),
+            ref: s.invoice_number,
+            description: `Sale to ${s.buyers?.company_name || 'Customer'}`,
+            category: 'Inventory Sale',
+            paymentMode: s.payment_mode || 'Credit',
+            type: 'Credit',
+            amount: s.grand_total || 0
+        });
+    });
+
+    // Purchase Rows (Debit / Outflow)
+    filteredPurchases.forEach(p => {
+        tempRows.push({
+            dateObj: new Date(p.purchase_date),
+            dateStr: format(new Date(p.purchase_date), 'dd-MM-yyyy'),
+            ref: p.purchase_number,
+            description: `Purchase from ${p.suppliers?.company_name || 'Supplier'}`,
+            category: 'Inventory Purchase',
+            paymentMode: 'Credit',
+            type: 'Debit',
+            amount: p.total_amount || 0
+        });
+    });
+
+    // Other Expense Rows (Debit / Outflow)
+    filteredOther.forEach(e => {
+        tempRows.push({
+            dateObj: new Date(e.date),
+            dateStr: format(new Date(e.date), 'dd-MM-yyyy'),
+            ref: 'EXP-' + e.id.slice(0, 4).toUpperCase(),
+            description: e.description,
+            category: e.category,
+            paymentMode: e.paymentMode,
+            type: 'Debit',
+            amount: e.amount
+        });
+    });
+
+    // Sort by date chronological (oldest to newest)
+    tempRows.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+
+    // 2. Ledger Worksheet Data with S.No
+    const ledgerHeader = [
+        'S.No',
+        'Date',
+        'Reference No',
+        'Description',
+        'Category',
+        'Payment Mode',
+        'Debit or Credit',
+        'Amount (₹)'
+    ];
+
+    const ledgerRows = tempRows.map((row, index) => [
+        index + 1,
+        row.dateStr,
+        row.ref,
+        row.description,
+        row.category,
+        row.paymentMode,
+        row.type,
+        row.amount
+    ]);
+
+    const ledgerData = [ledgerHeader, ...ledgerRows];
+
+    // 3. Create Excel Book
+    const workbook = XLSX.utils.book_new();
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    const ledgerSheet = XLSX.utils.aoa_to_sheet(ledgerData);
+
+    // Set widths
+    summarySheet['!cols'] = [{ wch: 40 }, { wch: 30 }];
+    ledgerSheet['!cols'] = [
+        { wch: 8 },  // S.No
+        { wch: 15 }, // Date
+        { wch: 20 }, // Reference No
+        { wch: 45 }, // Description
+        { wch: 25 }, // Category
+        { wch: 20 }, // Payment Mode
+        { wch: 18 }, // Debit or Credit
+        { wch: 18 }  // Amount
+    ];
+
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Financial Summary');
+    XLSX.utils.book_append_sheet(workbook, ledgerSheet, 'Ledger Transactions');
+
+    const filename = `Financial_Report_${fyName.replace(/ /g, '_')}_Exported_${format(new Date(), 'dd-MM-yyyy')}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+};

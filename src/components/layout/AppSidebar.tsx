@@ -14,7 +14,8 @@ import {
   FileCheck,
   Sun,
   Moon,
-  IndianRupee
+  IndianRupee,
+  Calculator
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,6 +57,7 @@ const transactionItems = [
 const reportItems = [
   { title: 'Reports', url: '/reports', icon: Box },
   { title: 'Payment Status', url: '/mis-report', icon: IndianRupee },
+  { title: 'Expense Calculator', url: '/expenses', icon: Calculator },
 ];
 
 export function AppSidebar() {

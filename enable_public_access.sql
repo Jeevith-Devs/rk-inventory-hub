@@ -13,6 +13,8 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_order_items ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to avoid conflicts (optional, but cleaner)
 DROP POLICY IF EXISTS "Allow public access" ON sales;
@@ -29,6 +31,8 @@ DROP POLICY IF EXISTS "Allow public access" ON profiles;
 DROP POLICY IF EXISTS "Allow public access" ON user_roles;
 DROP POLICY IF EXISTS "Allow public access" ON audit_logs;
 DROP POLICY IF EXISTS "Allow public access" ON categories;
+DROP POLICY IF EXISTS "Allow public access" ON purchase_orders;
+DROP POLICY IF EXISTS "Allow public access" ON purchase_order_items;
 
 -- Create policies to allow ALL operations (SELECT, INSERT, UPDATE, DELETE) for everyone (anon and authenticated)
 CREATE POLICY "Allow public access" ON sales FOR ALL USING (true) WITH CHECK (true);
@@ -45,3 +49,5 @@ CREATE POLICY "Allow public access" ON profiles FOR ALL USING (true) WITH CHECK 
 CREATE POLICY "Allow public access" ON user_roles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access" ON audit_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public access" ON categories FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access" ON purchase_orders FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access" ON purchase_order_items FOR ALL USING (true) WITH CHECK (true);

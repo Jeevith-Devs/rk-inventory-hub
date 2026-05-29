@@ -10,11 +10,15 @@
 
 -- Delete in order to respect foreign key constraints
 
--- Step 1: Delete sales and purchase related data (has foreign keys to other tables)
+-- Step 1: Delete sales, purchase, purchase order, and quotation related data (has foreign keys to other tables)
 DELETE FROM public.sale_items;
 DELETE FROM public.sales;
 DELETE FROM public.purchase_items;
 DELETE FROM public.purchases;
+DELETE FROM public.purchase_order_items;
+DELETE FROM public.purchase_orders;
+DELETE FROM public.quotation_items;
+DELETE FROM public.quotations;
 
 -- Step 2: Delete products (referenced by sale_items and purchase_items)
 DELETE FROM public.products;
@@ -43,6 +47,14 @@ UNION ALL
 SELECT 'purchases', COUNT(*) FROM public.purchases
 UNION ALL
 SELECT 'purchase_items', COUNT(*) FROM public.purchase_items
+UNION ALL
+SELECT 'purchase_orders', COUNT(*) FROM public.purchase_orders
+UNION ALL
+SELECT 'purchase_order_items', COUNT(*) FROM public.purchase_order_items
+UNION ALL
+SELECT 'quotations', COUNT(*) FROM public.quotations
+UNION ALL
+SELECT 'quotation_items', COUNT(*) FROM public.quotation_items
 UNION ALL
 SELECT 'buyers', COUNT(*) FROM public.buyers
 UNION ALL

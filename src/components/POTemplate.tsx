@@ -45,19 +45,80 @@ export function POTemplate({ poId }: POTemplateProps) {
         @media print {
           @page {
             size: A4;
-            margin: 8mm 10mm;
+            margin: 5mm 8mm;
           }
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+            background-color: white !important;
           }
           .no-print {
             display: none !important;
           }
+          /* Prevent min-height from forcing extra page */
+          .min-h-screen {
+            min-height: 0 !important;
+            height: auto !important;
+          }
+          /* Container padding reduction and full A4 height stretch for print */
+          .po-print-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            box-shadow: none !important;
+            ring: none !important;
+            border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 277mm !important;
+          }
+          /* Tighten spacing between main layout sections */
+          .mb-3 {
+            margin-bottom: 6px !important;
+          }
+          .mb-2 {
+            margin-bottom: 4px !important;
+          }
+          .mt-3 {
+            margin-top: 6px !important;
+          }
+          .p-3 {
+            padding: 6px !important;
+          }
+          .p-2 {
+            padding: 4px !important;
+          }
+          /* Reduce padding of table cells */
+          table {
+            margin-bottom: 6px !important;
+          }
+          th, td {
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+          }
+          /* Reduce height of empty filler rows */
+          .empty-row td {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            height: 32px !important;
+          }
+          /* Make signature block larger */
+          .sig-image {
+            height: 70px !important;
+          }
+          /* Make company logo larger */
+          .logo-img {
+            width: 100px !important;
+            height: 100px !important;
+          }
+          /* Align footer at the bottom of page */
+          .po-footer {
+            margin-top: auto !important;
+          }
         }
       `}</style>
 
-            <div className="max-w-[210mm] mx-auto bg-white p-6 print:p-3">
+            <div className="max-w-[210mm] mx-auto bg-white p-6 print:p-3 po-print-container">
                 {/* Header - PURCHASE ORDER */}
                 <div className="bg-green-600 text-white text-center py-1 text-sm font-bold mb-3">
                     PURCHASE ORDER
@@ -66,11 +127,11 @@ export function POTemplate({ poId }: POTemplateProps) {
                 {/* Logo and PO Details */}
                 <div className="grid grid-cols-2 gap-3 mb-3">
                     {/* Left: Logo */}
-                    <div className="border-2 border-blue-600 bg-blue-50 p-3 flex items-center gap-3">
+                    <div className="border-2 border-blue-600 bg-white p-3 flex items-center gap-3">
                         <img
                             src="/rk-logo.svg"
                             alt="Company Logo"
-                            className="w-20 h-20 object-contain flex-shrink-0"
+                            className="w-28 h-28 object-contain flex-shrink-0 logo-img"
                         />
                         <div>
                             <h1 className="text-lg font-bold text-blue-700 leading-tight">
@@ -119,7 +180,7 @@ export function POTemplate({ poId }: POTemplateProps) {
                     {/* Customer (SMR) Details */}
                     <div className="border border-gray-400">
                         <div className="bg-green-600 text-white px-2 py-1 text-xs font-bold">
-                            CUSTOMER (SMR) DETAILS
+                            COMPANY DETAILS
                         </div>
                         <div className="p-2 text-xs text-black">
                             <p className="font-bold text-sm mb-1">{company?.company_name || 'SMR PACKAGING SOLUTIONS'}</p>
@@ -218,8 +279,8 @@ export function POTemplate({ poId }: POTemplateProps) {
                         })}
 
                         {/* Empty rows */}
-                        {[...Array(Math.max(0, 5 - items.length))].map((_, i) => (
-                            <tr key={`empty-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-100'}>
+                        {[...Array(Math.max(0, 14 - items.length))].map((_, i) => (
+                            <tr key={`empty-${i}`} className="empty-row bg-white">
                                 <td className="border border-gray-400 px-1 py-2">&nbsp;</td>
                                 <td className="border border-gray-400 px-1 py-2">&nbsp;</td>
                                 <td className="border border-gray-400 px-1 py-2">&nbsp;</td>
@@ -237,7 +298,7 @@ export function POTemplate({ poId }: POTemplateProps) {
                         ))}
 
                         {/* Total Row */}
-                        <tr className="bg-white font-bold text[11px]">
+                        <tr className="bg-white font-bold text-[11px]">
                             <td colSpan={4} className="border border-gray-400 px-1 py-1.5 text-right">
                                 {items.reduce((sum, item) => sum + item.order_quantity, 0).toFixed(2)}
                             </td>
@@ -252,7 +313,7 @@ export function POTemplate({ poId }: POTemplateProps) {
                 </table>
 
                 {/* Terms & Conditions Footer */}
-                <div className="relative">
+                <div className="relative mt-auto po-footer">
                     <div className="grid grid-cols-[1fr_auto] gap-4">
                         {/* Left: Terms */}
                         <div>
@@ -262,15 +323,15 @@ export function POTemplate({ poId }: POTemplateProps) {
                             <div className="text-[9px] space-y-0.5 pl-2 text-black">
                                 {po.terms_conditions ? (
                                     po.terms_conditions.split('\n').map((line, i) => (
-                                        <p key={i}>{i + 1}. {line}</p>
+                                        <p key={i}>{line}</p>
                                     ))
                                 ) : (
                                     <>
-                                        <p>1. Delivery with in 3 to 5 days from purchase order</p>
-                                        <p>2. <strong>Payment with in 30 days from date of invoice</strong></p>
-                                        <p>3. Price revision applicable whenever there is increase or decrease in the raw materials price, The same to intimated in advance and mutually agreed</p>
-                                        <p>4. Kindly Supply The Materials As Per Drawing</p>
-                                        <p>5. Price revision applicable whenever there is increase or decrease in the raw materials price</p>
+                                        <p>Delivery with in 3 to 5 days from purchase order</p>
+                                        <p><strong>Payment with in 30 days from date of invoice</strong></p>
+                                        <p>Price revision applicable whenever there is increase or decrease in the raw materials price,<br></br>The same to intimated in advance and mutually agreed</p>
+                                        <p>Kindly Supply The Materials As Per Drawing</p>
+                                        <p>Price revision applicable whenever there is increase or decrease in the raw materials price</p>
                                     </>
                                 )}
                             </div>
@@ -284,17 +345,10 @@ export function POTemplate({ poId }: POTemplateProps) {
                             <img
                                 src="/sign.png"
                                 alt="Signature"
-                                className="h-12 ml-auto"
+                                className="h-12 ml-auto sig-image"
                             />
                             <p className="text-xs font-bold">Authorised Signatory</p>
                         </div>
-                    </div>
-                </div>
-
-                {/* Page Number */}
-                <div className="mt-3 text-right">
-                    <div className="bg-blue-900 text-white inline-block px-4 py-1 text-xs font-bold">
-                        PAGE: 1 / 1
                     </div>
                 </div>
             </div>
