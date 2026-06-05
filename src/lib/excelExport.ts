@@ -300,8 +300,8 @@ export const exportFinancialYearToExcel = (
         ['', ''],
         ['Summary Statement', ''],
         ['Category', 'Total Amount (₹)'],
-        ['Total Revenue (Sales / Stock Out)', totalSales],
-        ['Total Inventory Cost (Purchases / Stock In)', totalPurchases],
+        ['Total Revenue (Sales)', totalSales],
+        ['Total Inventory Cost (Purchases)', totalPurchases],
         ['Total Other Operating Expenses', totalOther],
         ['Net Profit / Loss (P&L)', netBalance],
         ['Net Profit Margin (%)', totalSales > 0 ? `${((netBalance / totalSales) * 100).toFixed(1)}%` : '0%']

@@ -276,7 +276,7 @@ export default function StockOutFormPage() {
 
     return (
         <PageContainer
-            title={isEditMode ? `Edit Invoice: ${existingSale?.invoice_number}` : 'New Stock Out / Tax Invoice'}
+            title={isEditMode ? `Edit Invoice: ${existingSale?.invoice_number}` : 'New Sales / Tax Invoice'}
             actions={
                 <Button variant="outline" size="sm" onClick={() => navigate('/sales')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -342,7 +342,7 @@ export default function StockOutFormPage() {
                             />
                             <FormItem>
                                 <div className="flex items-center h-6 mb-1">
-                                    <FormLabel className="!mb-0">Link Stock In</FormLabel>
+                                    <FormLabel className="!mb-0">Link Purchase</FormLabel>
                                 </div>
                                 <Select
                                     value={linkedPurchaseId || '__none__'}
@@ -350,7 +350,7 @@ export default function StockOutFormPage() {
                                 >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select Stock In..." />
+                                            <SelectValue placeholder="Select Purchase..." />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>

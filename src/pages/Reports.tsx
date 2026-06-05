@@ -52,17 +52,55 @@ export default function Reports() {
 
   const totalPurchases = filteredPurchases?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
   const totalSales = filteredSales?.reduce((sum, s) => sum + (s.grand_total || 0), 0) || 0;
-  const profit = totalSales - totalPurchases;
 
   const getSupplierName = (id: string) => suppliers?.find((s) => s.id === id)?.company_name || '-';
   const getBuyerName = (id: string) => buyers?.find((b) => b.id === id)?.company_name || '-';
 
+  // Helper to calculate cost of goods sold for a sale
+  const getSalePurchaseCost = (sale: any) => {
+    const linkedPurchaseId = extractLinkedPurchaseId(sale.notes);
+    const linkedPurchase = linkedPurchaseId ? purchases?.find(p => p.id === linkedPurchaseId) : null;
+    
+    let totalCost = 0;
+    const hasLinkedPurchase = !!linkedPurchase;
+    
+    (sale.sale_items || []).forEach((saleItem: any) => {
+      let unitCost = 0;
+      if (linkedPurchase) {
+        const match = linkedPurchase.purchase_items?.find(
+          (pi: any) => pi.product_id === saleItem.product_id
+        );
+        if (match && match.quantity > 0) {
+          unitCost = (match.total_amount || 0) / match.quantity;
+        } else {
+          unitCost = saleItem.products?.purchase_price || 0;
+        }
+      } else {
+        unitCost = saleItem.products?.purchase_price || 0;
+      }
+      totalCost += unitCost * (saleItem.quantity || 0);
+    });
+    
+    return {
+      purchaseCost: hasLinkedPurchase ? totalCost : null,
+      estimatedCost: totalCost
+    };
+  };
+
+  // Calculate total COGS (Cost of Goods Sold) for all filtered sales
+  const totalCOGS = (filteredSales || []).reduce((sum, sale) => {
+    const { estimatedCost } = getSalePurchaseCost(sale);
+    return sum + estimatedCost;
+  }, 0);
+
+  const profit = totalSales - totalCOGS;
+
   // ─── Per-Invoice Profit (via linked purchase tag) ────────────────────────
   const profitRows = (filteredSales || []).map(sale => {
+    const { purchaseCost } = getSalePurchaseCost(sale);
     const linkedPurchaseId = extractLinkedPurchaseId(sale.notes);
     const linkedPurchase = linkedPurchaseId ? purchases?.find(p => p.id === linkedPurchaseId) : null;
     const saleAmount = sale.grand_total || 0;
-    const purchaseCost = linkedPurchase?.total_amount || null;
     const profitAmt = purchaseCost !== null ? saleAmount - purchaseCost : null;
     const marginPct = (profitAmt !== null && saleAmount > 0) ? (profitAmt / saleAmount) * 100 : null;
     return { sale, linkedPurchase, saleAmount, purchaseCost, profitAmt, marginPct };
@@ -237,8 +275,8 @@ export default function Reports() {
                 Per-Invoice Profit Report
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Only invoices that have been linked to a Stock In entry show a profit figure.
-                Link a Stock In via the <span className="font-semibold">New Stock Out</span> form.
+                Only invoices that have been linked to a Purchase entry show a profit figure.
+                Link a Purchase via the <span className="font-semibold">New Sales</span> form.
               </p>
             </CardHeader>
             <CardContent>

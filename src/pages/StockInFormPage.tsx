@@ -306,7 +306,7 @@ export default function StockInFormPage() {
 
     if (isEditMode && isLoadingFullPurchase) {
         return (
-            <PageContainer title="Edit Stock In">
+            <PageContainer title="Edit Purchase">
                 <div className="flex h-[400px] items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -316,7 +316,7 @@ export default function StockInFormPage() {
 
     return (
         <PageContainer
-            title={isEditMode ? `Edit Stock In: ${existingPurchase?.purchase_number}` : 'New Stock In Entry'}
+            title={isEditMode ? `Edit Purchase: ${existingPurchase?.purchase_number}` : 'New Purchase Entry'}
             actions={
                 <Button variant="outline" size="sm" onClick={() => navigate('/purchases')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />

@@ -74,7 +74,7 @@ export const usePurchases = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchases')
-        .select('*, suppliers(company_name)')
+        .select('*, suppliers(company_name), purchase_items(*, products(name, product_code))')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

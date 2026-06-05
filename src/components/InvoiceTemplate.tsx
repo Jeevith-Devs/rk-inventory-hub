@@ -1,8 +1,6 @@
-import { useSales } from '@/hooks/useSales';
-import { useBuyers } from '@/hooks/useBuyers';
-import { useProducts } from '@/hooks/useProducts';
+import { useSale } from '@/hooks/useSales';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 
 interface InvoiceTemplateProps {
@@ -65,13 +63,12 @@ interface InvoiceCopyProps {
   copyType: 'original' | 'duplicate' | 'triplicate' | 'quadruplicate';
   sale: any;
   buyer: any;
-  products: any;
   company: any;
   basicAmount: number;
   totalTax: number;
 }
 
-function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAmount, totalTax }: InvoiceCopyProps) {
+function InvoiceCopy({ saleId, copyType, sale, buyer, company, basicAmount, totalTax }: InvoiceCopyProps) {
   const copyLabels = {
     original: 'ORIGINAL COPY',
     duplicate: 'DUPLICATE COPY',
@@ -207,7 +204,7 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
             <tbody>
               {sale.sale_items && sale.sale_items.length > 0 ? (
                 sale.sale_items.map((item, index) => {
-                  const product = products?.find((p) => p.id === item.product_id);
+                  const product = item.products;
                   return (
                     <tr key={item.id} className="border-b border-black h-fit">
                       <td className="border-r-2 border-black p-1 text-[8px] sm:text-[9px] print:text-[9px] text-center">{index + 1}</td>
@@ -456,21 +453,23 @@ function InvoiceCopy({ saleId, copyType, sale, buyer, products, company, basicAm
 }
 
 export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
-  const { data: sales } = useSales();
-  const { data: buyers } = useBuyers();
-  const { data: products } = useProducts();
-  const { data: company } = useCompanySettings();
+  const { data: sale, isLoading: isSaleLoading } = useSale(saleId);
+  const { data: company, isLoading: isCompanyLoading } = useCompanySettings();
 
-  const sale = sales?.find((s) => s.id === saleId);
-  const buyer = buyers?.find((b) => b.id === sale?.buyer_id);
+  const buyer = sale?.buyers;
+
+  const hasPrinted = useRef(false);
 
   useEffect(() => {
-    // Delay print to ensure all content is rendered
+    if (!sale || !buyer || !company) return;
+    if (hasPrinted.current) return;
+
+    hasPrinted.current = true;
     const timer = setTimeout(() => {
       window.print();
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [sale, buyer, company]);
 
   useEffect(() => {
     if (sale && buyer) {
@@ -483,7 +482,21 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
     };
   }, [sale, buyer]);
 
-  if (!sale || !buyer) return <div className="p-8">Loading invoice...</div>;
+  if (isSaleLoading || isCompanyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!sale || !buyer) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg text-muted-foreground">Invoice not found</p>
+      </div>
+    );
+  }
 
   const totalTax = (sale.cgst_amount || 0) + (sale.sgst_amount || 0) + (sale.igst_amount || 0);
   const basicAmount = (sale.subtotal || 0) - (sale.discount_amount || 0);
@@ -499,7 +512,6 @@ export function InvoiceTemplate({ saleId }: InvoiceTemplateProps) {
           copyType={copyType}
           sale={sale}
           buyer={buyer}
-          products={products}
           company={company}
           basicAmount={basicAmount}
           totalTax={totalTax}

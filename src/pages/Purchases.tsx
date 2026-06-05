@@ -63,7 +63,7 @@ export default function Purchases() {
 
   return (
     <PageContainer
-      title="Stock In (Purchases)"
+      title="Purchases"
       actions={
         <div className="flex gap-2">
           <Button

@@ -87,7 +87,7 @@ export interface SaleWithItems extends Sale {
     contact_person: string | null;
     phone: string | null;
   };
-  sale_items?: (SaleItem & { products?: { name: string; product_code: string; hsn_code: string | null; unit: string | null } })[];
+  sale_items?: (SaleItem & { products?: { name: string; product_code: string; hsn_code: string | null; unit: string | null; purchase_price?: number | null } })[];
 }
 
 export const useSales = () => {
@@ -96,7 +96,7 @@ export const useSales = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sales')
-        .select('*, buyers(company_name), sale_items(*, products(name, product_code))')
+        .select('*, buyers(company_name), sale_items(*, products(name, product_code, purchase_price))')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

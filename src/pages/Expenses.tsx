@@ -201,7 +201,7 @@ export default function Expenses() {
 
   // ─── Data Aggregation ──────────────────────────────────────────────────
 
-  // Filter Stock In (Purchases) by date range
+  // Filter Purchases by date range
   const filteredPurchases = (purchases || []).filter((p) =>
     isWithinInterval(parseISO(p.purchase_date), {
       start: parseISO(startDate),
@@ -209,7 +209,7 @@ export default function Expenses() {
     })
   );
 
-  // Filter Stock Out (Sales) by date range
+  // Filter Sales by date range
   const filteredSales = (sales || []).filter((s) =>
     isWithinInterval(parseISO(s.sale_date), {
       start: parseISO(startDate),
@@ -250,7 +250,7 @@ export default function Expenses() {
       date: s.sale_date,
       type: 'sale' as const,
       reference: s.invoice_number,
-      description: `Stock Out / Sale to ${s.buyers?.company_name || 'Customer'}`,
+      description: `Sale to ${s.buyers?.company_name || 'Customer'}`,
       category: 'Inventory Sale',
       paymentMode: s.payment_mode || 'Credit',
       amount: s.grand_total || 0,
@@ -260,7 +260,7 @@ export default function Expenses() {
       date: p.purchase_date,
       type: 'purchase' as const,
       reference: p.purchase_number,
-      description: `Stock In / Purchase from ${p.suppliers?.company_name || 'Supplier'}`,
+      description: `Purchase from ${p.suppliers?.company_name || 'Supplier'}`,
       category: 'Inventory Purchase',
       paymentMode: 'Credit', // Supabase purchases schema doesn't store mode directly
       amount: -(p.total_amount || 0),
@@ -469,7 +469,7 @@ export default function Expenses() {
               ₹{totalSales.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              From {filteredSales.length} Stock Out invoices
+              From {filteredSales.length} Sales invoices
             </p>
           </CardContent>
         </Card>
@@ -477,7 +477,7 @@ export default function Expenses() {
         <Card className="bg-rose-50/40 dark:bg-rose-950/10 border-rose-200/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-rose-800 dark:text-rose-300">
-              Stock In Expenses
+              Purchase Expenses
             </CardTitle>
             <ArrowDownRight className="h-4 w-4 text-rose-600" />
           </CardHeader>
@@ -537,7 +537,7 @@ export default function Expenses() {
           <div>
             <CardTitle className="text-base font-semibold">Unified Cash flow & Ledger</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              A breakdown of Stock In, Stock Out, and other logged expenditures.
+              A breakdown of Purchases, Sales, and other logged expenditures.
             </p>
           </div>
           {/* Table Filters */}
@@ -548,8 +548,8 @@ export default function Expenses() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="sale">Stock Out (Sale)</SelectItem>
-                <SelectItem value="purchase">Stock In (Purchase)</SelectItem>
+                <SelectItem value="sale">Sales</SelectItem>
+                <SelectItem value="purchase">Purchase</SelectItem>
                 <SelectItem value="other">Other Expense</SelectItem>
               </SelectContent>
             </Select>
@@ -613,9 +613,9 @@ export default function Expenses() {
                             }
                           >
                             {entry.type === 'sale'
-                              ? 'Stock Out'
+                              ? 'Sales'
                               : entry.type === 'purchase'
-                              ? 'Stock In'
+                              ? 'Purchase'
                               : 'Other Expense'}
                           </Badge>
                         </TableCell>

@@ -48,8 +48,8 @@ const masterItems = [
 ];
 
 const transactionItems = [
-  { title: 'Stock In (Purchase)', url: '/purchases', icon: TrendingUp },
-  { title: 'Stock Out (Sales)', url: '/sales', icon: TrendingDown },
+  { title: 'Purchase', url: '/purchases', icon: TrendingUp },
+  { title: 'Sales', url: '/sales', icon: TrendingDown },
   { title: 'Quotations', url: '/quotations', icon: FileCheck },
   { title: 'Purchase Orders', url: '/purchase-orders', icon: FileText },
 ];

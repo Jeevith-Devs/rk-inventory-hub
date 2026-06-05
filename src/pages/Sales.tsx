@@ -62,7 +62,7 @@ export default function Sales() {
 
   return (
     <PageContainer
-      title="Stock Out (Sales)"
+      title="Sales"
       actions={
         <div className="flex gap-2">
           <Button
