@@ -43,7 +43,7 @@ import { Loader2, Plus, Trash2, UserPlus, PackagePlus } from 'lucide-react';
 import { BuyerForm } from '@/components/forms/BuyerForm';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { useCreateProduct } from '@/hooks/useProducts';
-import { format } from 'date-fns';
+import { format, differenceInDays, addDays, parseISO } from 'date-fns';
 import { Constants } from '@/integrations/supabase/types';
 
 const saleSchema = z.object({
@@ -51,6 +51,7 @@ const saleSchema = z.object({
   sale_date: z.string().min(1, 'Sale date is required'),
   is_gst_invoice: z.boolean().default(true),
   payment_mode: z.enum(['Cash', 'UPI', 'NEFT', 'Credit', 'Cheque']).default('Credit'),
+  credit_days: z.number().min(0).optional(),
   transport_mode: z.enum(['Road', 'Courier', 'Pickup', 'Rail', 'Air']).default('Road'),
   vehicle_no: z.string().optional(),
   lr_no: z.string().optional(),
@@ -123,6 +124,7 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
       sale_date: format(new Date(), 'yyyy-MM-dd'),
       is_gst_invoice: true,
       payment_mode: 'Credit',
+      credit_days: 0,
       transport_mode: 'Road',
       vehicle_no: '',
       lr_no: '',
@@ -137,11 +139,17 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
   // Load existing sale data when editing
   useEffect(() => {
     if (isEditMode && existingSale) {
+      let crDays = 0;
+      if (existingSale.payment_mode === 'Credit' && existingSale.due_date && existingSale.sale_date) {
+        crDays = differenceInDays(parseISO(existingSale.due_date), parseISO(existingSale.sale_date));
+      }
+
       form.reset({
         buyer_id: existingSale.buyer_id,
         sale_date: existingSale.sale_date,
         is_gst_invoice: existingSale.is_gst_invoice ?? true,
         payment_mode: existingSale.payment_mode || 'Credit',
+        credit_days: crDays,
         transport_mode: existingSale.transport_mode || 'Road',
         vehicle_no: existingSale.vehicle_no || '',
         lr_no: existingSale.lr_no || '',
@@ -224,6 +232,12 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
 
     const halfTax = totals.tax / 2;
 
+    let calculatedDueDate: string | null = null;
+    if (data.payment_mode === 'Credit') {
+      const days = data.credit_days || 0;
+      calculatedDueDate = format(addDays(parseISO(data.sale_date), days), 'yyyy-MM-dd');
+    }
+
     const saleData = {
       invoice_number: isEditMode ? existingSale!.invoice_number : invoiceNumber!,
       buyer_id: data.buyer_id,
@@ -247,6 +261,7 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
       created_by: null,
       grand_total: grandTotal,
       notes: data.notes || null,
+      due_date: calculatedDueDate,
     };
 
     const itemsData = items.map((item) => ({
@@ -369,6 +384,26 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
               </FormItem>
             )}
           />
+          {form.watch('payment_mode') === 'Credit' && (
+            <FormField
+              control={form.control}
+              name="credit_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Credit Days</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
             control={form.control}
             name="is_gst_invoice"
@@ -534,7 +569,7 @@ export function SaleForm({ saleId, onSuccess, onCancel }: SaleFormProps) {
                     ?.filter((p) => p.status === 'active')
                     .map((product) => (
                       <SelectItem key={product.id} value={product.id}>
-                        {product.name} (Stock: {product.current_stock}) - ₹{product.selling_price}
+                        {product.name} - ₹{product.selling_price}
                       </SelectItem>
                     ))}
                 </SelectContent>

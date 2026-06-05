@@ -46,8 +46,8 @@ const productSchema = z.object({
   cgst_percent: z.number().min(0).max(100).default(9),
   sgst_percent: z.number().min(0).max(100).default(9),
   discount_percent: z.number().min(0).max(100).default(0),
-  current_stock: z.number().min(0).default(0),
-  reorder_level: z.number().min(0).default(10),
+  current_stock: z.number().default(0),
+  reorder_level: z.number().default(0),
   status: z.enum(['active', 'inactive']).default('active'),
 });
 
@@ -396,43 +396,9 @@ export function ProductForm({ product, onSubmit, isLoading, onCancel }: ProductF
           </div>
         </div>
 
-        {/* Stock */}
+        {/* Status */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium">Inventory</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="current_stock"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Stock</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      disabled={!!product}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="reorder_level"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reorder Level</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="status"

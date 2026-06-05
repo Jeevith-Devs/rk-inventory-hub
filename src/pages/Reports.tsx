@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { usePurchases } from '@/hooks/usePurchases';
+import { usePurchases, extractTransportCharges } from '@/hooks/usePurchases';
 import { useSales, extractLinkedPurchaseId } from '@/hooks/useSales';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useBuyers } from '@/hooks/useBuyers';
@@ -63,6 +63,13 @@ export default function Reports() {
     
     let totalCost = 0;
     const hasLinkedPurchase = !!linkedPurchase;
+
+    // Calculate total transport charges and total quantity purchased
+    const totalTransport = linkedPurchase ? extractTransportCharges(linkedPurchase.notes) : 0;
+    const totalPurchaseQty = linkedPurchase 
+      ? linkedPurchase.purchase_items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) || 0
+      : 0;
+    const transportCostPerUnit = totalPurchaseQty > 0 ? totalTransport / totalPurchaseQty : 0;
     
     (sale.sale_items || []).forEach((saleItem: any) => {
       let unitCost = 0;
@@ -71,7 +78,7 @@ export default function Reports() {
           (pi: any) => pi.product_id === saleItem.product_id
         );
         if (match && match.quantity > 0) {
-          unitCost = (match.total_amount || 0) / match.quantity;
+          unitCost = ((match.total_amount || 0) / match.quantity) + transportCostPerUnit;
         } else {
           unitCost = saleItem.products?.purchase_price || 0;
         }

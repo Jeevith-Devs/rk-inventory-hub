@@ -178,7 +178,6 @@ export default function Products() {
               <TableHead>Unit</TableHead>
               <TableHead className="text-right">Purchase Price</TableHead>
               <TableHead className="text-right">Selling Price</TableHead>
-              <TableHead className="text-right">Stock</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -205,17 +204,6 @@ export default function Products() {
                   <TableCell>{product.unit}</TableCell>
                   <TableCell className="text-right">₹{product.purchase_price?.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{product.selling_price?.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <span
-                      className={
-                        (product.current_stock || 0) <= (product.reorder_level || 0)
-                          ? 'text-destructive font-medium'
-                          : ''
-                      }
-                    >
-                      {product.current_stock}
-                    </span>
-                  </TableCell>
                   <TableCell>
                     <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
                       {product.status}

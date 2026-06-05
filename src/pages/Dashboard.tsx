@@ -89,7 +89,7 @@ export default function Dashboard() {
     <PageContainer title="Dashboard">
       <div className="space-y-6">
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <StatCard
             title="Total Products"
             value={stats?.totalProducts || 0}
@@ -108,23 +108,9 @@ export default function Dashboard() {
             icon={Users}
             description="Active customers"
           />
-          <StatCard
-            title="Low Stock Items"
-            value={stats?.lowStockCount || 0}
-            icon={AlertTriangle}
-            description="Below reorder level"
-            variant={stats?.lowStockCount && stats.lowStockCount > 0 ? 'warning' : 'default'}
-          />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="Stock Value"
-            value={formatCurrency(stats?.totalStockValue || 0)}
-            icon={IndianRupee}
-            description="Total inventory value"
-            variant="success"
-          />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
           <StatCard
             title="Monthly Purchases"
             value={formatCurrency(stats?.monthlyPurchases || 0)}

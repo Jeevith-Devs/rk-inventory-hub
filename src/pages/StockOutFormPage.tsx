@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { format, differenceInDays, addDays, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,6 +50,7 @@ const saleSchema = z.object({
     sale_date: z.string().min(1, 'Sale date is required'),
     is_gst_invoice: z.boolean().default(true),
     payment_mode: z.enum(['Cash', 'UPI', 'NEFT', 'Credit', 'Cheque']).default('Credit'),
+    credit_days: z.number().min(0).optional(),
     transport_mode: z.enum(['Road', 'Courier', 'Pickup', 'Rail', 'Air']).default('Road'),
     vehicle_no: z.string().optional(),
     lr_no: z.string().optional(),
@@ -103,6 +104,7 @@ export default function StockOutFormPage() {
             sale_date: format(new Date(), 'yyyy-MM-dd'),
             is_gst_invoice: true,
             payment_mode: 'Credit',
+            credit_days: 0,
             transport_mode: 'Road',
             vehicle_no: '',
             lr_no: '',
@@ -116,11 +118,17 @@ export default function StockOutFormPage() {
 
     useEffect(() => {
         if (isEditMode && existingSale) {
+            let crDays = 0;
+            if (existingSale.payment_mode === 'Credit' && existingSale.due_date && existingSale.sale_date) {
+                crDays = differenceInDays(parseISO(existingSale.due_date), parseISO(existingSale.sale_date));
+            }
+
             form.reset({
                 buyer_id: existingSale.buyer_id,
                 sale_date: existingSale.sale_date,
                 is_gst_invoice: existingSale.is_gst_invoice ?? true,
                 payment_mode: (existingSale.payment_mode as any) || 'Credit',
+                credit_days: crDays,
                 transport_mode: (existingSale.transport_mode as any) || 'Road',
                 vehicle_no: existingSale.vehicle_no || '',
                 lr_no: existingSale.lr_no || '',
@@ -207,6 +215,12 @@ export default function StockOutFormPage() {
         // Embed the linked purchase tag into notes (invisible in invoice PDF)
         const notesWithTag = embedLinkedPurchaseTag(data.notes || '', linkedPurchaseId || null);
 
+        let calculatedDueDate: string | null = null;
+        if (data.payment_mode === 'Credit') {
+            const days = data.credit_days || 0;
+            calculatedDueDate = format(addDays(parseISO(data.sale_date), days), 'yyyy-MM-dd');
+        }
+
         const saleData = {
             invoice_number: isEditMode ? existingSale!.invoice_number : invoiceNumber!,
             buyer_id: data.buyer_id,
@@ -232,7 +246,7 @@ export default function StockOutFormPage() {
             notes: notesWithTag || null,
             payment_status: existingSale?.payment_status || 'Unpaid',
             paid_amount: existingSale?.paid_amount || 0,
-            due_date: existingSale?.due_date || null,
+            due_date: calculatedDueDate,
             payment_reference: existingSale?.payment_reference || null,
         };
 
@@ -403,6 +417,28 @@ export default function StockOutFormPage() {
                                     </FormItem>
                                 )}
                             />
+                            {form.watch('payment_mode') === 'Credit' && (
+                                <FormField
+                                    control={form.control}
+                                    name="credit_days"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <div className="flex items-center h-6 mb-1">
+                                                <FormLabel className="!mb-0">Credit Days</FormLabel>
+                                            </div>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
                             <FormField
                                 control={form.control}
                                 name="is_gst_invoice"
@@ -574,7 +610,7 @@ export default function StockOutFormPage() {
                                         <SelectContent>
                                             {products?.filter((p) => p.status === 'active').map((product) => (
                                                 <SelectItem key={product.id} value={product.id}>
-                                                    {product.name} (Stock: {product.current_stock}) - ₹{product.selling_price}
+                                                    {product.name} - ₹{product.selling_price}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
